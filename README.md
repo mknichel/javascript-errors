@@ -33,6 +33,14 @@ if (!checkPrecondition()) {
 
 In this case, the error will be `Error: Doesn't meet precondition!`. This error will also contain a stack trace that points to the appropriate line.
 
+There are multiple ways that developers can throw an error in JavaScript:
+
+*  `throw new Error('Problem description.')`
+*  `throw Error('Problem description.')` <-- equivalent to the first one
+*  `throw 'Problem description.'` <-- BAD
+
+Throwing a String is really not recommended since the browser will not attach a stack trace to that error, losing the context of where that error ocurred in the code. See https://mknichel.github.io/JavaScript-Errors/throw-string.html for an example.
+
 ### Error Messages
 
 Each browser has its own set of messages that it uses for the built in exceptions, such as the example above for trying to call a non-function. Browsers will try to use the same messages, but since there is no spec, this is not guaranteed. For example, both Chrome and Firefox use `{0} is not a function` for the above example, but when there are multiple default statements in a `switch` statement, Chrome will throw `"More than one default clause in switch statement"` while Firefox will report `"more than one switch default"`. As new features are added to the web, these error messages have to be updated. These differences can come into play later when you are trying to handle reported errors from obfuscated code.
