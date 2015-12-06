@@ -54,6 +54,31 @@ You can find the templates that browsers use for error messages at:
 
 The stack trace is a description of where the error happened in the code. It is composed of a series of frames, where each frames describe a particular line in the code. The topmost frame is the location where the error was thrown, while the subsequent frames are the function call stack - or how the code was executed to get to that point where the error was thrown. Since JavaScript is usually concatenated and minified, it is also important to have column numbers so that the exact statement can be located when a given line has a multitude of statements.
 
+A basic stack trace looks like:
+
+```
+  at throwError (http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:9)
+  at http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:3
+```
+
+Each stack frame consists of a function name (if applicable and the code was not executed in the global scope), the script that it came from, and the line and column number of the code.
+
+Unfortunately, there is no standard for the stack trace format so this differs by browser. Firefox's stack trace looks like:
+
+```
+  throwError@http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:9
+  @http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:3
+```
+
+Safari's format is also slightly different:
+
+```
+  throwError@http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:18
+  global code@http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:13
+```
+
+The same basic information is there, but the format is different. Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. These minor differences will come into play later when the server needs to parse the stack trace for reported errors.
+
 ## Techniques for Catching Errors
 
 ## Reporting Errors to the Server
