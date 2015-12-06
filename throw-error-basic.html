@@ -1,0 +1,19 @@
+<html>
+<head>
+  <title>Basic throwing an error and catching it</title>
+</head>
+<body>
+<script>
+function throwError() {
+  throw new Error("basic error");
+}
+
+try {
+  throwError();
+} catch (e) {
+  console.log('Error message: ' + e.message);
+  console.log('Stack trace: ' + e.stack);
+}
+</script>
+</body>
+</html>
