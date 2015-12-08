@@ -10,6 +10,9 @@ This file contains information that I've learned over the years about dealing wi
    *  [Error Messages](#error-messages)
    *  [Stack Trace Format](#stack-trace-format)
 *  [Catching JavaScript Errors](#catching-javascript-errors)
+   *  [window.onerror](#window.onerror)
+   *  [try/catch](#try/catch)
+   *  [Protected Entry Points](#protected-entry-points)
 
 ## Introduction
 
@@ -199,5 +202,48 @@ This is a really handy technique to make sure that stack traces are still correc
 http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl describes the sourceURL annotation in more detail.
 
 ## Catching JavaScript Errors
+
+To detect that your application had an error, some code must be able to catch that error and report about it. There are multiple techniques for catching errors, each with their pros and cons.
+
+### window.onerror
+
+window.onerror is one of the easiest ways to get started catching errors. By assigning window.onerror to a function, any error that is uncaught by another part of the application will be reported to this function, along with some information about the error. For example:
+
+```javascript
+window.onerror = function(msg, url, line, col, err) {
+  console.log('Application encountered an error: ' + msg);
+  console.log('Stack trace: ' + err.stack);
+}
+```
+
+https://developer.mozilla.org/en-US/docs/Web/API/GlobalEventHandlers/onerror describes this in more detail.
+
+Historically, there have been a few problems with this approach:
+
+**No Error object provided**
+
+The 5th argument to the window.onerror function is an Error object, or at least it's supposed to be. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome and Firefox now properly provide an Error object (along with a critical stack property), but Safari and IE do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127). Older versions of Chrome (such as Chrome 28 which is popular on Android) do not get an error object.
+
+**Cross domain sanitization**
+
+For errors that come from another domain, all the information in the window.onerror handler will be sanitized to "Script error.", "", 0. This is generally okay if you really don't want to process the error if it comes from a script that you don't care about.
+
+If you would like to receive errors with full fidelity from cross domain scripts, those resources must provide the appropriate cross origin headers. See https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror for more information.
+
+**Chrome Extensions**
+
+Chrome extensions that are installed on a user's machine can also throw errors that get reported to window.onerror. These exceptions are very noisy and unactionable, so it's important that your application avoids reporting these errors.
+
+**Other Bugs**
+
+*  Top level line number argument is wrong when sourceURL is used.
+
+#### Recommendation
+
+window.onerror is a useful tool to catch and report JS errors. It's recommended that only JS errors with valid Error objects and stack traces are reported back to the server, otherwise the errors may be hard to investigate or you may get a lot of spam from Chrome extensions or cross domain scripts.
+
+### try/catch
+
+### Protected Entry Points
 
 ## Reporting Errors to the Server
