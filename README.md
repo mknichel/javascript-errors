@@ -46,9 +46,10 @@ There are multiple ways that developers can throw an error in JavaScript:
 
 *  `throw new Error('Problem description.')`
 *  `throw Error('Problem description.')` <-- equivalent to the first one
-*  `throw 'Problem description.'` <-- BAD
+*  `throw 'Problem description.'` <-- Bad
+*  `throw null` <-- Even worse
 
-Throwing a String is really not recommended since the browser will not attach a stack trace to that error, losing the context of where that error ocurred in the code. See https://mknichel.github.io/JavaScript-Errors/throw-string.html for an example.
+Throwing a String is really not recommended since the browser will not attach a stack trace to that error, losing the context of where that error ocurred in the code. See https://mknichel.github.io/javascript-errors/throw-string.html for an example.
 
 ### Error Messages
 
@@ -66,8 +67,8 @@ The stack trace is a description of where the error happened in the code. It is 
 A basic stack trace looks like:
 
 ```
-  at throwError (http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:9)
-  at http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:3
+  at throwError (http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:9)
+  at http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
 
 Each stack frame consists of a function name (if applicable and the code was not executed in the global scope), the script that it came from, and the line and column number of the code.
@@ -77,22 +78,22 @@ Unfortunately, there is no standard for the stack trace format so this differs b
 IE 11's stack trace looks similar to Chrome's except it explicitly lists Global code:
 
 ```
-  at throwError (http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:3)
-  at Global code (http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:3)
+  at throwError (http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:3)
+  at Global code (http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3)
 ```
 
 Firefox's stack trace looks like:
 
 ```
-  throwError@http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:9
-  @http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:3
+  throwError@http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:9
+  @http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
 
 Safari's format is also slightly different:
 
 ```
-  throwError@http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:8:18
-  global code@http://mknichel.github.io/JavaScript-Errors/throw-error-basic.html:12:13
+  throwError@http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:18
+  global code@http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:13
 ```
 
 The same basic information is there, but the format is different. Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. These minor differences will come into play later when the server needs to parse the stack trace for reported errors.
@@ -107,13 +108,35 @@ By default, anonymous functions have no name and appear as "anonymous" in the fu
 setTimeout(function nameOfTheAnonymousFunction() { ... }, 0);
 ```
 
-This will ensure that `nameOfTheAnonymousFunction` appears in the frame for any code from inside that function, making debugging much easier. See http://www.html5rocks.com/en/tutorials/developertools/async-call-stack/#toc-debugging-tips for more information.
+This will cause the stack trace to go from:
+
+```
+(anonymous function)	@	anonymous-function.html:7
+```
+
+to
+
+```
+nameOfTheAnonymousFunction	@	anonymous-function.html:8
+```
+
+This method ensures that `nameOfTheAnonymousFunction` appears in the frame for any code from inside that function, making debugging much easier. See http://www.html5rocks.com/en/tutorials/developertools/async-call-stack/#toc-debugging-tips for more information.
 
 #### Programatically capturing stack traces
 
 If an error is reported without a stack trace (see more details when this would happen below), then it's possible to programatically capture a stack trace.
 
 In Chrome, this is really easy to do by using the Error.captureStackTrace API. See https://github.com/v8/v8/wiki/Stack%20Trace%20API for more information on the use of this API.
+
+For example:
+
+```javascript
+function ignoreThisFunctionInStackTrace() {
+  var err = new Error();
+  Error.captureStackTrace(err, ignoreThisFunctionInStackTrace);
+  return err.stack;
+}
+```
 
 In other browsers, a stack trace can also be collected by creating a new error and accessing the stack property of that object:
 
@@ -140,9 +163,40 @@ It's also very common for asynchronous points to be inserted into JavaScript cod
 
 Chrome DevTools has support for async stack traces, or in other words making sure the stack trace of an error also shows the frames that happened before the async point was introduced. With the use of setTimeout, this will capture who called the setTimeout function that eventually produced an error. See http://www.html5rocks.com/en/tutorials/developertools/async-call-stack/ for more information.
 
-Async stack traces are only supported in Chrome DevTools right now. Stack traces accessed from errors in code will **not** have the async stack trace as part of it.
+An async stack trace will look like:
+
+```
+  throwError	@	throw-error.js:2
+  setTimeout (async)		
+  throwErrorAsync	@	throw-error.js:10
+  (anonymous function)	@	throw-error-basic.html:14
+```
+
+Async stack traces are only supported in Chrome DevTools right now, only for exceptions that are thrown when DevTools are open. Stack traces accessed from errors in code will **not** have the async stack trace as part of it.
 
 It is possible to polyfill async stack traces in some cases, but this could cause a significant performance hit for your application since capturing a stack trace is not cheap.
+
+#### Naming inline scripts and eval
+
+Stack traces for code that was inlined into a HTML page will use the page's URL and line/column numbers for the executed code.
+
+For example:
+
+```
+  at throwError (http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:9)
+  at http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
+```
+
+If these scripts actually come from a script that was inlined for optimization reasons, then the URL, line, and column numbers will be wrong. To work around this problem, Chrome and Firefox support the `//# sourceURL=` annotation. The URL specified in this annotation will be used as the URL for all stack traces, and the line and column number will be computed relative to the start of the `<script>` tag instead of the HTML document. For the same error as above, using the sourceURL annotation with a value of "inline.js" will produce a stack trace that looks like:
+
+```
+  at throwError (http://mknichel.github.io/javascript-errors/inline.js:8:9)
+  at http://mknichel.github.io/javascript-errors/inline.js:12:3
+```
+
+This is a really handy technique to make sure that stack traces are still correct even when using inline scripts and eval.
+
+http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl describes the sourceURL annotation in more detail.
 
 ## Catching JavaScript Errors
 
