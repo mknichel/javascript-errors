@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+  <title>Guide to JavaScript Errors</title>
+  <style>
+    .active {
+      background-color: green;
+    }
+  </style>
+  <script src="javascript-errors.js"></script>
+  <script id="no-sourceurl-annotation">
+    function throwErrorFromInlineScriptNoSourceUrl() {
+      throwErrorWrapper();
+    }
+  </script>
+  <script id="sourceurl-annotation">
+    function throwErrorFromInlineScriptWithSourceUrl() {
+      throwErrorWrapper();
+    }
+
+    //# sourceURL=inline.js
+  </script>
+</head>
+<body>
+
+  <button id="noerrorhandler" class="active" onclick="useNoErrorHandler()">Use no error handler</button>
+  <button id="windowonerror" onclick="useWindowOnError()">Use window.onerror</button>
+  <button id="trycatch" onclick="useTryCatch()">Use try / catch block</button>
+  <button id="protectedentrypoint" onclick="useProtectedEntryPoints()">Use protected entry points</button>
+
+  <hr>
+
+  <button onclick="invokeError(exampleErrorMessageTemplate);">Example error message template</button>
+  <button onclick="invokeError(throwErrorWrapper);">Throw basic error</button>
+  <button onclick="invokeError(throwString);">Throw string</button>
+  <button onclick="invokeError(throwAsyncError)">Throw async error</button>
+  <button onclick="invokeError(throwNamedAnonymousFunction)">Named anonymous function</button>
+  <button onclick="invokeError(throwUnnamedAnonymousFunction)">Un-named anonymous function</button>
+  <button onclick="invokeError(catchAndRethrow)">Catch and rethrow error</button>
+  <button onclick="invokeError(throwErrorFromInlineScriptNoSourceUrl)">Throw error from inline script (no sourceURL)</button>
+  <button onclick="invokeError(throwErrorFromInlineScriptWithSourceUrl)">Throw error from inline script (with sourceURL)</button>
+  <button onclick="invokeError(evalError)">Throw error from eval</button>
+  <button onclick="invokeError(evalErrorWithSourceUrl)">Throw error from eval (with sourceURL)</button>
+  <button onclick="invokeError(errorFromPromise)">Error from promise</button>
+  <button onclick="invokeError(errorFromRejectedPromise)">Error from rejected promise</button>
+
+  <hr>
+
+  <span>Error handler output:</span>
+  <pre id="console" style="border: 1px solid black; height: 300px"></pre>
+
+</body>
+</html>
