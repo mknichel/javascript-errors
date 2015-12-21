@@ -10,8 +10,8 @@ This file contains information that I've learned over the years about dealing wi
    *  [Error Messages](#error-messages)
    *  [Stack Trace Format](#stack-trace-format)
 *  [Catching JavaScript Errors](#catching-javascript-errors)
-   *  [window.onerror](#window.onerror)
-   *  [try/catch](#try/catch)
+   *  [window.onerror](#windowonerror)
+   *  [try/catch](#trycatch)
    *  [Protected Entry Points](#protected-entry-points)
 
 ## Introduction
@@ -56,7 +56,7 @@ Throwing a String is really not recommended since the browser will not attach a 
 
 ### Error Messages
 
-Each browser has its own set of messages that it uses for the built in exceptions, such as the example above for trying to call a non-function. Browsers will try to use the same messages, but since there is no spec, this is not guaranteed. For example, both Chrome and Firefox use `{0} is not a function` for the above example, but when there are multiple default statements in a `switch` statement, Chrome will throw `"More than one default clause in switch statement"` while Firefox will report `"more than one switch default"`. As new features are added to the web, these error messages have to be updated. These differences can come into play later when you are trying to handle reported errors from obfuscated code.
+Each browser has its own set of messages that it uses for the built in exceptions, such as the example above for trying to call a non-function. Browsers will try to use the same messages, but since there is no spec, this is not guaranteed. For example, both Chrome and Firefox use `{0} is not a function` for the above example while IE11 will report `Function expected` (also without reporting what variable was attempted to be called). When there are multiple default statements in a `switch` statement, Chrome will throw `"More than one default clause in switch statement"` while Firefox will report `"more than one switch default"`. As new features are added to the web, these error messages have to be updated. These differences can come into play later when you are trying to handle reported errors from obfuscated code.
 
 You can find the templates that browsers use for error messages at:
 
@@ -99,13 +99,13 @@ Safari's format is also slightly different:
   global code@http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:13
 ```
 
-The same basic information is there, but the format is different. Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. These minor differences will come into play later when the server needs to parse the stack trace for reported errors.
+The same basic information is there, but the format is different. Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. The column numbers also can deviate more in different error situations - for example in the code `(function namedFunction() { throwError(); })();`, Chrome will report the column for the `throwError()` function call while IE11 reports the column number as the start of the string. These differences will come back into play later when the server needs to parse the stack trace for reported errors and deobfuscate obfuscated stack traces.
 
 See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/Stack for more information on the stack property of errors.
 
 #### Naming anonymous functions
 
-By default, anonymous functions have no name and appear as "anonymous" in the function names in the stack trace. To improve debugging, you can name all stack traces:
+By default, anonymous functions have no name and either appear as empty string or "Anonymous function" in the function names in the stack trace (depending on the browser). To improve debugging, you can name all stack traces:
 
 ```javascript
 setTimeout(function nameOfTheAnonymousFunction() { ... }, 0);
@@ -114,13 +114,13 @@ setTimeout(function nameOfTheAnonymousFunction() { ... }, 0);
 This will cause the stack trace to go from:
 
 ```
-(anonymous function)	@	anonymous-function.html:7
+at http://mknichel.github.io/javascript-errors/javascript-errors.js:125:17
 ```
 
 to
 
 ```
-nameOfTheAnonymousFunction	@	anonymous-function.html:8
+at nameOfTheAnonymousFunction (http://mknichel.github.io/javascript-errors/javascript-errors.js:121:31)
 ```
 
 This method ensures that `nameOfTheAnonymousFunction` appears in the frame for any code from inside that function, making debugging much easier. See http://www.html5rocks.com/en/tutorials/developertools/async-call-stack/#toc-debugging-tips for more information.
@@ -181,7 +181,7 @@ It is possible to polyfill async stack traces in some cases, but this could caus
 
 #### Naming inline scripts and eval
 
-Stack traces for code that was inlined into a HTML page will use the page's URL and line/column numbers for the executed code.
+Stack traces for code that was eval'ed or inlined into a HTML page will use the page's URL and line/column numbers for the executed code.
 
 For example:
 
@@ -190,7 +190,7 @@ For example:
   at http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
 
-If these scripts actually come from a script that was inlined for optimization reasons, then the URL, line, and column numbers will be wrong. To work around this problem, Chrome and Firefox support the `//# sourceURL=` annotation. The URL specified in this annotation will be used as the URL for all stack traces, and the line and column number will be computed relative to the start of the `<script>` tag instead of the HTML document. For the same error as above, using the sourceURL annotation with a value of "inline.js" will produce a stack trace that looks like:
+If these scripts actually come from a script that was inlined for optimization reasons, then the URL, line, and column numbers will be wrong. To work around this problem, Chrome and Firefox support the `//# sourceURL=` annotation (Safari and IE do not). The URL specified in this annotation will be used as the URL for all stack traces, and the line and column number will be computed relative to the start of the `<script>` tag instead of the HTML document. For the same error as above, using the sourceURL annotation with a value of "inline.js" will produce a stack trace that looks like:
 
 ```
   at throwError (http://mknichel.github.io/javascript-errors/inline.js:8:9)
@@ -200,6 +200,45 @@ If these scripts actually come from a script that was inlined for optimization r
 This is a really handy technique to make sure that stack traces are still correct even when using inline scripts and eval.
 
 http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl describes the sourceURL annotation in more detail.
+
+##### Eval stack traces
+
+There are other differences in the stack trace besides just the use of the sourceURL annotation. In Chrome, a stack trace from a statement used in eval could look like:
+
+```
+Error: Error from eval
+    at evaledFunction (eval at evalError (http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3), <anonymous>:1:36)
+    at eval (eval at evalError (http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3), <anonymous>:1:68)
+    at evalError (http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3)
+```
+
+In IE11, this would look like:
+
+```
+Error from eval
+    at evaledFunction (eval code:1:30)
+    at eval code (eval code:1:2)
+    at evalError (http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3)
+```
+
+In Safari:
+
+```
+Error from eval
+    evaledFunction
+    eval code
+    eval@[native code]
+    evalError@http://mknichel.github.io/javascript-errors/javascript-errors.js:137:7
+```
+
+and in Firefox:
+
+```
+Error from eval
+    evaledFunction@http://mknichel.github.io/javascript-errors/javascript-errors.js line 137 > eval:1:36
+    @http://mknichel.github.io/javascript-errors/javascript-errors.js line 137 > eval:1:11
+    evalError@http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3
+```
 
 ## Catching JavaScript Errors
 
@@ -222,7 +261,7 @@ Historically, there have been a few problems with this approach:
 
 **No Error object provided**
 
-The 5th argument to the window.onerror function is an Error object, or at least it's supposed to be. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome and Firefox now properly provide an Error object (along with a critical stack property), but Safari and IE do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127). Older versions of Chrome (such as Chrome 28 which is popular on Android) do not get an error object.
+The 5th argument to the window.onerror function is supposed to be an Error object. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome, Firefox, and IE11 now properly provide an Error object (along with the critical stack property), but Safari and IE10 do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127), although older versions of Chrome (such as some versions still popular on Android) do not get an error object.
 
 **Cross domain sanitization**
 
@@ -236,7 +275,7 @@ Chrome extensions that are installed on a user's machine can also throw errors t
 
 **Other Bugs**
 
-*  Top level line number argument is wrong when sourceURL is used.
+*  TODO: Write bug report for top level line number argument is wrong when sourceURL is used.
 
 #### Recommendation
 
