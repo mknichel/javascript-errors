@@ -13,6 +13,7 @@ This file contains information that I've learned over the years about dealing wi
    *  [window.onerror](#windowonerror)
    *  [try/catch](#trycatch)
    *  [Protected Entry Points](#protected-entry-points)
+   *  [Web Workers](#web-workers)
 
 ## Introduction
 
@@ -316,5 +317,30 @@ window.setTimeout = function protectedSetTimeout(fn, time) {
   return _oldSetTimeout.call(window, protectEntryPoint(fn), time);
 };
 ```
+
+### Web Workers
+
+Web workers execute in a different execution context than the main page, so errors from workers aren't caught by the above mechanisms. Additional steps need to be taken to capture errors from workers on the page.
+
+When a worker is created, the onerror property can be set on the new worker:
+
+```javascript
+var worker = new Worker('worker.js');
+worker.onerror = function(errorEvent) { ... };
+```
+
+This is defined in https://html.spec.whatwg.org/multipage/workers.html#handler-abstractworker-onerror. The `onerror` function on the worker has a different signature than the `window.onerror` discussed above. Instead of accepting 5 arguments, worker.onerror takes a single argument: an ErrorEvent object. The API for this object can be found at https://developer.mozilla.org/en-US/docs/Web/API/ErrorEvent. It contains the message, filename, line, and column, but no stable browser today contains the "Error" object that contains the stack trace (errorEvent.error is null). Since this API is executed in the parent page's scope, it would be useful for using the same reporting mechanism as the parent page; unfortunately due to the lack of a stack trace, this API is of limited use.
+
+Inside of the JS run by the worker, you can also define an onerror API that follows the usual window.onerror API: https://html.spec.whatwg.org/multipage/webappapis.html#onerroreventhandler. In the worker code:
+
+```javascript
+self.onerror = function(message, filename, line, col, error) { ... };
+```
+
+The discussion of this API mostly follows the discussion above for window.onerror. However, there are 2 notable things to point out:
+
+Firefox, as well as Safari, do not report the "error" object as the 5th argument to the function, so these browsers do not get a stack trace from the worker. Protected Entry Points for the `onmessage` function within the worker can be used to capture stack trace information for these browsers. As usual, the column numbers reported by each of Chrome, Firefox, and Safari are also different.
+
+Since this code executes within the worker, the code must choose how to report the error back to the server: It must either use `postMessage` to communicate the error back to the parent page, or install an XHR error reporting mechanism (discussed more below) in the worker itself.
 
 ## Reporting Errors to the Server
