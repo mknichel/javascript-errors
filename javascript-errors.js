@@ -8,6 +8,15 @@
 var _useTryCatch = false;
 var _oldSetTimeout;
 var _oldPromiseThen;
+var _worker;
+
+function log(content, append) {
+  if (append) {
+    document.getElementById('console').textContent += content;
+  } else {
+    document.getElementById('console').textContent = content;
+  }
+}
 
 function throwString() {
   throw "You shouldn't throw strings.";
@@ -52,7 +61,11 @@ function useWindowOnError() {
         "Line: " + line + "\n" +
         "Column: " + col + "\n" +
         "Error: " + (!!error && error.stack);
-    document.getElementById('console').innerText = content;
+    if (msg.indexOf('from worker') != -1) {
+      log("\n\nError info from window.onerror:\n" + content, true);
+    } else {
+      log(content);
+    }
   };
 }
 
@@ -71,7 +84,7 @@ function protectEntryPoint(fn) {
     try {
       return oldFn.apply(this, arguments);
     } catch (e) {
-      document.getElementById('console').innerText = "Error object: " + e + "\nStack Trace: " + e.stack;
+      log("Error object: " + e + "\nStack Trace: " + e.stack);
     }
   }
 }
@@ -94,7 +107,7 @@ function catchError(fn) {
   try {
     fn();
   } catch (e) {
-    document.getElementById('console').innerText = "Error object: " + e + "\nStack Trace: " + e.stack;
+    log("Error object: " + e + "\nStack Trace: " + e.stack);
   }
 }
 
@@ -155,4 +168,27 @@ function errorFromRejectedPromise() {
   p.then(function(val) {
     return val++;
   });
+}
+
+function errorFromWorker() {
+  // Clear out existing content so that both sources of errors from the worker are shown.
+  log('');
+  if (!_worker) {
+    _worker = new Worker('worker.js');
+    _worker.onerror = function(event) {
+      var content = "\n\nError info from parent onerror:\n" +
+          "Message: " + event.message + "\n" +
+          "Filename: " + event.filename + "\n" +
+          "Line: " + event.lineno + "\n" +
+          "Column: " + event.colno + "\n" +
+          "Error obj: " + event.error;
+      log(content, true);
+    };
+    _worker.onmessage = handleWorkerMessage;
+  }
+  _worker.postMessage({ useTryCatch: _useTryCatch });
+}
+
+function handleWorkerMessage(event) {
+  log(event.data, true);
 }
