@@ -1,4 +1,4 @@
-# JavaScript Errors
+# JavaScript Errors Handbook
 
 This file contains information that I've learned over the years about dealing with JavaScript errors, reporting them to the server, and navigating a lot of bugs that can make this all really hard.
 
@@ -339,8 +339,37 @@ self.onerror = function(message, filename, line, col, error) { ... };
 
 The discussion of this API mostly follows the discussion above for window.onerror. However, there are 2 notable things to point out:
 
-Firefox, as well as Safari, do not report the "error" object as the 5th argument to the function, so these browsers do not get a stack trace from the worker. Protected Entry Points for the `onmessage` function within the worker can be used to capture stack trace information for these browsers. As usual, the column numbers reported by each of Chrome, Firefox, and Safari are also different.
+Firefox, as well as Safari, do not report the "error" object as the 5th argument to the function, so these browsers do not get a stack trace from the worker (Chrome and IE11 do get a stack trace). Protected Entry Points for the `onmessage` function within the worker can be used to capture stack trace information for these browsers.
 
 Since this code executes within the worker, the code must choose how to report the error back to the server: It must either use `postMessage` to communicate the error back to the parent page, or install an XHR error reporting mechanism (discussed more below) in the worker itself.
 
+In Firefox, Safari, and IE11 (but not in Chrome), the parent page's window.onerror function will also be called after the worker's own onerror and the onerror event listener set by the page has been called. However, this window.onerror will also not contain an error object and therefore won't have a stack trace also. These browsers must also take care to not report errors from workers multiple times.
+
+#### Worker Try/Catch
+
+To capture stack traces in Firefox + Safari within a worker, the `onmessage` function can be wrapped in a try/catch block to catch any errors that propagate to the top. 
+
+```javascript
+self.onmessage = function(event) {
+  try {
+    // logic here
+  } catch (e) {
+    // Report exception.
+  }
+};
+```
+
+The normal try/catch mechanism will capture stack traces for these errors, producing an exception that looks like:
+
+```
+Error from worker
+throwError@http://mknichel.github.io/javascript-errors/worker.js:4:9
+throwErrorWrapper@http://mknichel.github.io/javascript-errors/worker.js:8:3
+self.onmessage@http://mknichel.github.io/javascript-errors/worker.js:14:7
+```
+
 ## Reporting Errors to the Server
+
+Once the client is configured to properly catch exceptions with correct stack traces, these exceptions should be reported back to the server so they can be tracked, analyzed, and then fixed. Typically this is done with a XHR endpoint that records the error message and the stack trace information, along with any relevant client context information, such as the version of the code that's running, the user agent, the user's locale, and the top level URL of the page.
+
+If the application uses multiple mechanisms to catch errors, it's important to not report the same error twice. Errors that contain a stack trace should be preferred; errors reported without a stack trace can be hard to track down in a large application.
