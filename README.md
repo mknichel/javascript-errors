@@ -283,6 +283,38 @@ window.onerror is a useful tool to catch and report JS errors. It's recommended 
 
 ### try/catch
 
+Given the above section, unfortunately it's not possible to rely on window.onerror in all browsers to capture all error information. For catching exceptions locally, a try/catch block is the obvious choice. It's also possible to wrap entire JavaScript files in a try/catch block to capture error information that can't be caught with window.onerror. This improves the situations for browsers that don't support window.onerror, but also has some downsides.
+
+#### Doesn't catch all errors
+
+A try/catch block won't capture all errors in a program, such as errors that are thrown from an async block of code through `window.setTimeout`. Try/catch can be used with [Protected Entry Points](#protected-entry-points) to help fill in the gaps. 
+
+#### Deoptimizations
+
+In V8 (and potentially other JS engines), functions that contain a try/catch block won't be optimized by the compiler. See http://www.html5rocks.com/en/tutorials/speed/v8/ for more information.
+
 ### Protected Entry Points
+
+An "entry point" into JavaScript is any browser API that can start execution of your code. Examples include setTimeout, setInterval, event listeners, XHR, web sockets, or promises. Errors that are thrown from these entry points will be caught by window.onerror, but in the browsers that don't support the full Error object in window.onerror, an alternative mechanism is needed to catch these errors since the try/catch method mentioned above won't catch them either.
+
+Thankfully, JavaScript allows these entry points to be wrapped so that a try/catch block can be inserted before the function is invoked to catch any errors thrown by the code.
+
+Each entry point will need slightly different code to protect the entry point, but the gist of the methodology is:
+
+```javascript
+function protectEntryPoint(fn) {
+  return function protectedFn() {
+    try {
+      return fn();
+    } catch (e) {
+      // Handle error.
+    }
+  }
+}
+_oldSetTimeout = window.setTimeout;
+window.setTimeout = function protectedSetTimeout(fn, time) {
+  return _oldSetTimeout.call(window, protectEntryPoint(fn), time);
+};
+```
 
 ## Reporting Errors to the Server
