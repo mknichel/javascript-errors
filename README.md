@@ -278,9 +278,13 @@ Chrome extensions that are installed on a user's machine can also throw errors t
 
 *  TODO: Write bug report for top level line number argument is wrong when sourceURL is used.
 
+#### window.addEventListener("error")
+
+The `window.addEventListener("error")` API works the same as the window.onerror API. See http://www.w3.org/html/wg/drafts/html/master/webappapis.html#runtime-script-errors for more information on this approach.
+
 #### Recommendation
 
-window.onerror is a useful tool to catch and report JS errors. It's recommended that only JS errors with valid Error objects and stack traces are reported back to the server, otherwise the errors may be hard to investigate or you may get a lot of spam from Chrome extensions or cross domain scripts.
+window.onerror is the best tool to catch and report JS errors. It's recommended that only JS errors with valid Error objects and stack traces are reported back to the server, otherwise the errors may be hard to investigate or you may get a lot of spam from Chrome extensions or cross domain scripts.
 
 ### try/catch
 
