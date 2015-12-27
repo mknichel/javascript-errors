@@ -1,8 +1,8 @@
 "use strict";
 
-/**                                                                                                                                                                                 
- * @fileoverview This file contains all the functions used to test                                                                                                                  
- * JavaScript error behavior.                                                                                                                                                       
+/**
+ * @fileoverview This file contains all the functions used to test
+ * JavaScript error behavior.
  */
 
 var _useTryCatch = false;
@@ -36,6 +36,7 @@ function resetErrorHandlers() {
   document.getElementById('windowonerror').className = '';
   document.getElementById('trycatch').className = '';
   document.getElementById('protectedentrypoint').className = '';
+  document.getElementById('windowaddeventlistener').className = '';
   window.onerror = undefined;
   _useTryCatch = false;
   if (_oldSetTimeout) {
@@ -44,6 +45,7 @@ function resetErrorHandlers() {
   if (_oldPromiseThen) {
     Promise.prototype.then = _oldPromiseThen;
   }
+  window.removeEventListener("error", errorEventListener);
 }
 
 function useNoErrorHandler() {
@@ -102,6 +104,24 @@ function useProtectedEntryPoints() {
     return _oldPromiseThen.call(this, protectEntryPoint(callback), protectEntryPoint(errorHandler));
   };
 }
+
+function errorEventListener(e) {
+  var content = "Info from error event:\n" +
+      "Message: " + e.message + "\n" +
+      "Filename: " + e.filename + "\n" +
+      "Line: " + e.lineno + "\n" +
+      "Column: " + e.colno + "\n" +
+      "Stack trace: " + (!!e.error && e.error.stack);
+  log(content);
+}
+
+function useWindowAddEventListener() {
+  resetErrorHandlers();
+  document.getElementById('windowaddeventlistener').className = 'active';
+
+  window.addEventListener("error", errorEventListener);
+}
+
 /** Catches any errors thrown by the given function. */
 function catchError(fn) {
   try {
