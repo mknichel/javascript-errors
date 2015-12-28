@@ -9,6 +9,7 @@ var _useTryCatch = false;
 var _oldSetTimeout;
 var _oldPromiseThen;
 var _worker;
+var _sharedWorker;
 
 function log(content, append) {
   if (append) {
@@ -190,25 +191,63 @@ function errorFromRejectedPromise() {
   });
 }
 
+function handleWorkerError(event) {
+  var content = "\n\nError info from parent onerror:\n" +
+      "Message: " + event.message + "\n" +
+      "Filename: " + event.filename + "\n" +
+      "Line: " + event.lineno + "\n" +
+      "Column: " + event.colno + "\n" +
+      "Error obj: " + event.error;
+  log(content, true);
+}
+
 function errorFromWorker() {
   // Clear out existing content so that both sources of errors from the worker are shown.
   log('');
   if (!_worker) {
     _worker = new Worker('worker.js');
-    _worker.onerror = function(event) {
-      var content = "\n\nError info from parent onerror:\n" +
-          "Message: " + event.message + "\n" +
-          "Filename: " + event.filename + "\n" +
-          "Line: " + event.lineno + "\n" +
-          "Column: " + event.colno + "\n" +
-          "Error obj: " + event.error;
-      log(content, true);
-    };
+    _worker.onerror = handleWorkerError;
     _worker.onmessage = handleWorkerMessage;
   }
   _worker.postMessage({ useTryCatch: _useTryCatch });
 }
 
+function errorFromSharedWorker() {
+  if (!('SharedWorker' in window)) {
+    log('SharedWorker not supported.');
+    return;
+  }
+  log('');
+  if (!_sharedWorker) {
+    _sharedWorker = new SharedWorker('worker.js');
+    _sharedWorker.onerror = handleWorkerError;
+    _sharedWorker.port.addEventListener("message", handleWorkerMessage);
+    _sharedWorker.port.start();
+  }
+  _sharedWorker.port.postMessage({ useTryCatch: _useTryCatch });
+}
+
 function handleWorkerMessage(event) {
   log(event.data, true);
+}
+
+function errorFromServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    log('Service worker not supported.');
+    return;
+  }
+  navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+    log('Look at dev tools console for error information from the service worker');
+    registration.unregister();
+  });
+}
+
+function errorFromServiceWorkerInstallation() {
+  if (!('serviceWorker' in navigator)) {
+    log('Service worker not supported.');
+    return;
+  }
+  navigator.serviceWorker.register('/service-worker-installation-error.js').catch(function(error) {
+    log("Error from the parent page service worker installation:\n" + error + "\n\nLook at devtools console for more information.");
+  });
 }

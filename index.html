@@ -7,6 +7,8 @@
       background-color: green;
     }
   </style>
+  <!-- Uncomment this and run with localhost to test cross domain behavior. -->
+  <!--<script src="https://mknichel.github.io/javascript-errors/javascript-errors.js"></script>-->
   <script src="javascript-errors.js"></script>
   <script id="no-sourceurl-annotation">
     function throwErrorFromInlineScriptNoSourceUrl() {
@@ -45,6 +47,9 @@
   <button onclick="invokeError(errorFromPromise)">Error from promise</button>
   <button onclick="invokeError(errorFromRejectedPromise)">Error from rejected promise</button>
   <button onclick="invokeError(errorFromWorker)">Error from web worker</button>
+  <button onclick="invokeError(errorFromSharedWorker)">Error in shared web worker</button>
+  <button onclick="invokeError(errorFromServiceWorker)">Error in service worker</button>
+  <button onclick="invokeError(errorFromServiceWorkerInstallation)">Error in service worker installation</button>
 
   <hr>
 
