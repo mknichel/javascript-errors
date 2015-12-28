@@ -236,7 +236,7 @@ function errorFromServiceWorker() {
     log('Service worker not supported.');
     return;
   }
-  navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+  navigator.serviceWorker.register('service-worker.js').then(function(registration) {
     log('Look at dev tools console for error information from the service worker');
     registration.unregister();
   });
@@ -247,7 +247,7 @@ function errorFromServiceWorkerInstallation() {
     log('Service worker not supported.');
     return;
   }
-  navigator.serviceWorker.register('/service-worker-installation-error.js').catch(function(error) {
+  navigator.serviceWorker.register('service-worker-installation-error.js').catch(function(error) {
     log("Error from the parent page service worker installation:\n" + error + "\n\nLook at devtools console for more information.");
   });
 }
