@@ -127,6 +127,53 @@ at nameOfTheAnonymousFunction (http://mknichel.github.io/javascript-errors/javas
 
 This method ensures that `nameOfTheAnonymousFunction` appears in the frame for any code from inside that function, making debugging much easier. See http://www.html5rocks.com/en/tutorials/developertools/async-call-stack/#toc-debugging-tips for more information.
 
+##### Assigning functions to a variable
+
+Browsers will use the name of the variable or property that a function is assigned to if the function itself does not have a name. For example, in
+
+```javascript
+var fnVariableName = function() { ... };
+```
+
+browsers will use `fnVariableName` as the name of the function in stack traces.
+
+```
+    at throwError (http://mknichel.github.io/javascript-errors/javascript-errors.js:27:9)
+    at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37)
+```
+
+If this variable is defined within another function, all browsers will use just the name of the variable as the name of the function in the stack trace except for Firefox, which will use a different form that concatenates the name of the outer function with the name of the inner variable. Example:
+
+```javascript
+function throwErrorFromInnerFunctionAssignedToVariable() {
+  var fnVariableName = function() { throw new Error("foo"); };
+  fnVariableName();
+}
+```
+
+will produce in Firefox:
+
+```
+throwErrorFromInnerFunctionAssignedToVariable/fnVariableName@http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37
+```
+
+In other browsers, this would look like:
+
+```
+at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37)
+```
+
+##### displayName Property
+
+The display name of a function can also be set by the `displayName` property in all major browsers except for IE11. In these browsers, the displayName will appear in the devtools debugger, but in all browsers but Safari, it will **not** be used in Error stack traces (Safari differs from the rest by also using the displayName in the stack trace associated with an error).
+
+```javascript
+var someFunction = function() {};
+someFunction.displayName = " # A longer description of the function.";
+```
+
+There is no official spec for the displayName property, but it is supported by all the major browsers. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/displayName and http://www.alertdebugging.com/2009/04/29/building-a-better-javascript-profiler-with-webkit/ for more information on displayName.
+
 #### Programatically capturing stack traces
 
 If an error is reported without a stack trace (see more details when this would happen below), then it's possible to programatically capture a stack trace.
