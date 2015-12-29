@@ -159,6 +159,17 @@ function throwUnnamedAnonymousFunction() {
   (function() { throwError(); })();
 }
 
+function throwErrorFromFunctionWithDisplayName() {
+  function namedFunction() { throwError(); };
+  namedFunction.displayName = " # complicated description of function";
+  namedFunction();
+}
+
+function throwErrorFromInnerFunctionAssignedToVariable() {
+  var fnVariableName = function() { throwError(); };
+  fnVariableName();
+}
+
 function catchAndRethrow() {
   try {
     throwErrorWrapper();
