@@ -14,6 +14,7 @@ This file contains information that I've learned over the years about dealing wi
    *  [try/catch](#trycatch)
    *  [Protected Entry Points](#protected-entry-points)
    *  [Web Workers](#web-workers)
+   *  [Chrome Extensions](#chrome-extensions)
 
 ## Introduction
 
@@ -403,6 +404,22 @@ throwError@http://mknichel.github.io/javascript-errors/worker.js:4:9
 throwErrorWrapper@http://mknichel.github.io/javascript-errors/worker.js:8:3
 self.onmessage@http://mknichel.github.io/javascript-errors/worker.js:14:7
 ```
+
+### Chrome Extensions
+
+[Chrome Extensions](https://developer.chrome.com/extensions) deserve their own section since errors in these scripts can operate slightly differently, and historically (but not anymore) errors from Chrome Extensions have also been a problem for large popular sites.
+
+#### Content Scripts
+
+Content scripts are scripts that run in the context of web pages that a user visits. These scripts run in an [isolated execution environment](https://developer.chrome.com/extensions/content_scripts#execution-environment) so they can access the DOM but they can not access JavaScript on the parent page (and vice versa).
+
+Since content scripts have their own execution environment, they can assign to the `window.onerror` handler in their own script and it won't affect the parent page. However, errors caught by `window.onerror` in the content script are sanitized by Chrome resulting in a "Script error." with null filename and 0 for line and column. This bug is tracked by https://code.google.com/p/chromium/issues/detail?id=457785. Until that bug is fixed, a try/catch block or protected entry points are the only ways to catch JS errors in a content script with stack traces.
+
+In years past, errors from content scripts would be reported to the `window.onerror` handler of the parent page which could result in a large amount of spammy error reports for popular sites. This was fixed in late 2013 though (https://code.google.com/p/chromium/issues/detail?id=225513). 
+
+#### Browser Actions
+
+Chrome extensions can also generate browser action popups, which are small HTML pages that spawn when a user clicks a Chrome extension icon to the right of the URL bar. These pages can also run JavaScript, in an entirely different execution environment from everything else. `window.onerror` works properly for this JavaScript.
 
 ## Reporting Errors to the Server
 
