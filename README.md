@@ -374,6 +374,54 @@ window.setTimeout = function protectedSetTimeout(fn, time) {
 };
 ```
 
+### Promises
+
+Sadly, it's easy for errors that happen in Promises to go unobserved and unreported. Errors that happen in a Promise but are not handled by attaching a rejection handler are not reported anywhere else - they do **not** get reported to `window.onerror`. Even if a Promise attaches a rejection handler, that code itself must manually report those errors for them to be logged. See http://www.html5rocks.com/en/tutorials/es6/promises/#toc-error-handling for more information. For example:
+
+```javascript
+window.onerror = function(...) {
+  // This will never be invoked by Promise code.
+};
+
+var p = new Promise(...);
+p.then(function() {
+  throw new Error("This error will be not handled anywhere.");
+});
+
+var p2 = new Promise(...);
+p2.then(function() {
+  throw new Error("This error will be handled in the chain.");
+}).catch(function(error) {
+  // Show error message to user
+  // This code should manually report the error for it to be logged on the server, if applicable.
+});
+```
+
+One approach to capture more information is to use [Protected Entry Points](#protected-entry-points) to wrap invocations of Promise methods with a try/catch to report errors. This might look like:
+
+```javascript
+  var _oldPromiseThen = Promise.prototype.then;
+  Promise.prototype.then = function protectedThen(callback, errorHandler) {
+    return _oldPromiseThen.call(this, protectEntryPoint(callback), protectEntryPoint(errorHandler));
+  };
+```
+
+#### Error handling in Promise polyfills
+
+Promise implementations, such as Q, Bluebird, and Closure handle errors in different ways which are better than the error handling in the browser implementation of Promises.
+
+* In [Q](https://github.com/kriskowal/q), you can "end" the Promise chain by calling `.done()` which will make sure that if an error wasn't handled in the chain, it will get rethrown and reported. See https://github.com/kriskowal/q#handling-errors
+* In [Bluebird](http://bluebirdjs.com/), unhandled rejections are logged and reported immediately. See http://bluebirdjs.com/docs/features.html#surfacing-unhandled-errors
+* In [Closure's goog.Promise](https://github.com/google/closure-library/blob/master/closure/goog/promise/promise.js) implementation, unhandled rejections are logged and reported if no chain in the Promise handles the rejection within a configurable time interval (in order to allow code later in the program to add a rejection handler).
+
+#### Long stack traces
+
+The [async stack trace](#async-stack-traces) section above discusses that browsers don't capture stack information when there is an async hook, such as calling `Promise.prototype.then`. Promise polyfills feature a way to capture the async stack trace points which can make diagnosing errors much easier. This approach is expensive, but it can be really useful for capturing more debug information.
+
+* In Q, call `Q.longStackSupport = true;`. See https://github.com/kriskowal/q#long-stack-traces
+* In Bluebird, call `Promise.longStackTraces()` somewhere in the application. See http://bluebirdjs.com/docs/features.html#long-stack-traces.
+* In Closure, set `goog.Promise.LONG_STACK_TRACES` to true.
+
 ### Web Workers
 
 Web workers, including dedicated workers, shared workers, and service workers, are becoming more popular in applications today. Since all of these workers are separate scripts from the main page, they each need their own error handling code. It is recommended that each worker script install its own error handling and reporting code for maximum effectiveness handling errors from workers.
