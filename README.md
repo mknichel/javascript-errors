@@ -1,6 +1,8 @@
 # JavaScript Errors Handbook
 
-This file contains information that I've learned over the years about dealing with JavaScript errors, reporting them to the server, and navigating a lot of bugs that can make this all really hard.
+This README contains information that I've learned over the years about dealing with JavaScript errors, reporting them to the server, and navigating through a lot of bugs that can make this all really hard. Browsers have improved in this area, but there is still room left to improve to make sure that all applications can sanely and soundly handle any error that happens.
+
+Test cases for content found in this guide can be found at https://mknichel.github.io/javascript-errors/.
 
 **Table of Contents**
 
@@ -13,16 +15,17 @@ This file contains information that I've learned over the years about dealing wi
    *  [window.onerror](#windowonerror)
    *  [try/catch](#trycatch)
    *  [Protected Entry Points](#protected-entry-points)
+   *  [Promises](#promises)
    *  [Web Workers](#web-workers)
    *  [Chrome Extensions](#chrome-extensions)
 
 ## Introduction
 
-Catching, reporting, and fixing errors is an important part of any application to ensure the health and stability of the application. Since JavaScript code is also executed on the client and in many different browser environments, staying on top of JS Errors from your application can also be hard. There are no formal web specs for how to report JS errors which cause differences in each browser's implementation. Additionally, there have been many bugs in browsers' implementation of JavaScript errors as well that have made this even harder. This page walks through aspects of JS Errors that I have learned over the years.
+Catching, reporting, and fixing errors is an important part of any application to ensure the health and stability of the application. Since JavaScript code is also executed on the client and in many different browser environments, staying on top of JS Errors from your application can also be hard. There are no formal web specs for how to report JS errors which cause differences in each browser's implementation. Additionally, there have been many bugs in browsers' implementation of JavaScript errors as well that have made this even harder. This page navigates through these aspects of JS Errors so that future developers can handle errors better and browsers will hopefully converge on standardized solutions.
 
 ## Anatomy of a JavaScript Error
 
-A JavaScript error is composed of two primary pieces: the **error message** and the **stack trace**. The error message is a string that describes what went wrong, and the stack trace describes where in the code the error happened.
+A JavaScript error is composed of two primary pieces: the **error message** and the **stack trace**. The error message is a string that describes what went wrong, and the stack trace describes where in the code the error happened. JS Errors can be produced either by the browser itself or thrown by application code.
 
 ### Producing a JavaScript Error
 
@@ -35,9 +38,9 @@ var a = 3;
 a();
 ```
 
-In this example, a variable that is actually a number is trying to be invoked as a function. The browser will throw an error that looks like `TypeError: a is not a function` with a stack trace that points to that line of code.
+In this example, a variable that is actually a number can't be invoked as a function. The browser will throw an error like `TypeError: a is not a function` with a stack trace that points to that line of code.
 
-A developer might want to throw an error in a piece of code if a certain precondition is not met. For example
+A developer might also want to throw an error in a piece of code if a certain precondition is not met. For example
 
 ```javascript
 if (!checkPrecondition()) {
@@ -45,20 +48,22 @@ if (!checkPrecondition()) {
 }
 ```
 
-In this case, the error will be `Error: Doesn't meet precondition!`. This error will also contain a stack trace that points to the appropriate line.
+In this case, the error will be `Error: Doesn't meet precondition!`. This error will also contain a stack trace that points to the appropriate line. Errors thrown by the browser and application code can be handled the same.
 
 There are multiple ways that developers can throw an error in JavaScript:
 
 *  `throw new Error('Problem description.')`
 *  `throw Error('Problem description.')` <-- equivalent to the first one
-*  `throw 'Problem description.'` <-- Bad
-*  `throw null` <-- Even worse
+*  `throw 'Problem description.'` <-- bad
+*  `throw null` <-- even worse
 
-Throwing a String is really not recommended since the browser will not attach a stack trace to that error, losing the context of where that error ocurred in the code. See https://mknichel.github.io/javascript-errors/throw-string.html for an example.
+Throwing a string or null is really not recommended since the browser will not attach a stack trace to that error, losing the context of where that error ocurred in the code. It is best to throw an actual Error object, which will contain the error message as well as a stack trace that points to the right lines of code where the error happened.
 
 ### Error Messages
 
-Each browser has its own set of messages that it uses for the built in exceptions, such as the example above for trying to call a non-function. Browsers will try to use the same messages, but since there is no spec, this is not guaranteed. For example, both Chrome and Firefox use `{0} is not a function` for the above example while IE11 will report `Function expected` (also without reporting what variable was attempted to be called). When there are multiple default statements in a `switch` statement, Chrome will throw `"More than one default clause in switch statement"` while Firefox will report `"more than one switch default"`. As new features are added to the web, these error messages have to be updated. These differences can come into play later when you are trying to handle reported errors from obfuscated code.
+Each browser has its own set of messages that it uses for the built in exceptions, such as the example above for trying to call a non-function. Browsers will try to use the same messages, but since there is no spec, this is not guaranteed. For example, both Chrome and Firefox use `{0} is not a function` for the above example while IE11 will report `Function expected` (notably also without reporting what variable was attempted to be called).
+
+However, browsers tend to diverge often as well. When there are multiple default statements in a `switch` statement, Chrome will throw `"More than one default clause in switch statement"` while Firefox will report `"more than one switch default"`. As new features are added to the web, these error messages have to be updated. These differences can come into play later when you are trying to handle reported errors from obfuscated code.
 
 You can find the templates that browsers use for error messages at:
 
@@ -94,20 +99,24 @@ Firefox's stack trace looks like:
   @http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
 
-Safari's format is also slightly different:
+Safari's format is similar to Firefox's format but is also slightly different:
 
 ```
   throwError@http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:18
   global code@http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:13
 ```
 
-The same basic information is there, but the format is different. Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. The column numbers also can deviate more in different error situations - for example in the code `(function namedFunction() { throwError(); })();`, Chrome will report the column for the `throwError()` function call while IE11 reports the column number as the start of the string. These differences will come back into play later when the server needs to parse the stack trace for reported errors and deobfuscate obfuscated stack traces.
+The same basic information is there, but the format is different.
+
+Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. The column numbers also can deviate more in different error situations - for example in the code `(function namedFunction() { throwError(); })();`, Chrome will report the column for the `throwError()` function call while IE11 reports the column number as the start of the string. These differences will come back into play later when the server needs to parse the stack trace for reported errors and deobfuscate obfuscated stack traces.
 
 See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/Stack for more information on the stack property of errors.
 
+Diving in more, there are a lot of nuances to stack trace formats that are discussed in the below sections.
+
 #### Naming anonymous functions
 
-By default, anonymous functions have no name and either appear as empty string or "Anonymous function" in the function names in the stack trace (depending on the browser). To improve debugging, you can name all stack traces:
+By default, anonymous functions have no name and either appear as empty string or "Anonymous function" in the function names in the stack trace (depending on the browser). To improve debugging, you should add a name to all functions to ensure it appears in the stack frame. The easiest way to do this is to ensure that anonymous functions are specified with a name, even if that name is not used anywhere else. For example:
 
 ```javascript
 setTimeout(function nameOfTheAnonymousFunction() { ... }, 0);
@@ -129,7 +138,7 @@ This method ensures that `nameOfTheAnonymousFunction` appears in the frame for a
 
 ##### Assigning functions to a variable
 
-Browsers will use the name of the variable or property that a function is assigned to if the function itself does not have a name. For example, in
+Browsers will also use the name of the variable or property that a function is assigned to if the function itself does not have a name. For example, in
 
 ```javascript
 var fnVariableName = function() { ... };
@@ -142,7 +151,8 @@ browsers will use `fnVariableName` as the name of the function in stack traces.
     at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37)
 ```
 
-If this variable is defined within another function, all browsers will use just the name of the variable as the name of the function in the stack trace except for Firefox, which will use a different form that concatenates the name of the outer function with the name of the inner variable. Example:
+
+Even more nuanced than that, if this variable is defined within another function, all browsers will use just the name of the variable as the name of the function in the stack trace except for Firefox, which will use a different form that concatenates the name of the outer function with the name of the inner variable. Example:
 
 ```javascript
 function throwErrorFromInnerFunctionAssignedToVariable() {
@@ -207,11 +217,11 @@ try {
 }
 ```
 
-If none of these approaches work, then it's possible to create a rough stack trace without line numbers or columns by iterating over the `arguments.callee.caller` object - this won't work in ES5 Strict Mode though.
+If none of these approaches work, then it's possible to create a rough stack trace without line numbers or columns by iterating over the `arguments.callee.caller` object - this won't work in ES5 Strict Mode though and it's not a recommended approach.
 
 #### Async stack traces
 
-It's also very common for asynchronous points to be inserted into JavaScript code. This will happen when code uses `setTimeout`, or through the use of Promises for example.
+It is very common for asynchronous points to be inserted into JavaScript code, such as when code uses `setTimeout` or through the use of Promises. These async entry points can cause problems for stack traces, since they cause a new execution context to form and the stack trace starts from scratch again.
 
 Chrome DevTools has support for async stack traces, or in other words making sure the stack trace of an error also shows the frames that happened before the async point was introduced. With the use of setTimeout, this will capture who called the setTimeout function that eventually produced an error. See http://www.html5rocks.com/en/tutorials/developertools/async-call-stack/ for more information.
 
@@ -224,7 +234,7 @@ An async stack trace will look like:
   (anonymous function)	@	throw-error-basic.html:14
 ```
 
-Async stack traces are only supported in Chrome DevTools right now, only for exceptions that are thrown when DevTools are open. Stack traces accessed from errors in code will **not** have the async stack trace as part of it.
+Async stack traces are only supported in Chrome DevTools right now, only for exceptions that are thrown when DevTools are open. Stack traces accessed from Error objects in code will **not** have the async stack trace as part of it.
 
 It is possible to polyfill async stack traces in some cases, but this could cause a significant performance hit for your application since capturing a stack trace is not cheap.
 
@@ -250,9 +260,12 @@ This is a really handy technique to make sure that stack traces are still correc
 
 http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl describes the sourceURL annotation in more detail.
 
+*  Up until Chrome 42, Chrome did not compute line numbers correctly for inline scripts that use the sourceURL annotation. See https://bugs.chromium.org/p/v8/issues/detail?id=3920 for more information.
+*  TODO: File a bug for: there's a bug triggered only in certain applications where the line number reported in stack traces that come from inline scripts is relative to the HTML document even when sourceURL is used, which results in bad deobfuscation for those stacks.
+
 ##### Eval stack traces
 
-There are other differences in the stack trace besides just the use of the sourceURL annotation. In Chrome, a stack trace from a statement used in eval could look like:
+For code that uses eval, there are other differences in the stack trace besides whether or not it uses the sourceURL annotation. In Chrome, a stack trace from a statement used in eval could look like:
 
 ```
 Error: Error from eval
@@ -289,13 +302,15 @@ Error from eval
     evalError@http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3
 ```
 
+These differences can make it hard to parse eval code the same across all browsers.
+
 ## Catching JavaScript Errors
 
 To detect that your application had an error, some code must be able to catch that error and report about it. There are multiple techniques for catching errors, each with their pros and cons.
 
 ### window.onerror
 
-window.onerror is one of the easiest ways to get started catching errors. By assigning window.onerror to a function, any error that is uncaught by another part of the application will be reported to this function, along with some information about the error. For example:
+`window.onerror` is one of the easiest and best ways to get started catching errors. By assigning `window.onerror` to a function, any error that is uncaught by another part of the application will be reported to this function, along with some information about the error. For example:
 
 ```javascript
 window.onerror = function(msg, url, line, col, err) {
@@ -310,21 +325,17 @@ Historically, there have been a few problems with this approach:
 
 **No Error object provided**
 
-The 5th argument to the window.onerror function is supposed to be an Error object. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome, Firefox, and IE11 now properly provide an Error object (along with the critical stack property), but Safari and IE10 do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127), although older versions of Chrome (such as some versions still popular on Android) do not get an error object.
+The 5th argument to the `window.onerror` function is supposed to be an Error object. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome, Firefox, and IE11 now properly provide an Error object (along with the critical stack property), but Safari and IE10 do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127).
 
 **Cross domain sanitization**
 
-In Chrome, errors that come from another domain in the window.onerror handler will be sanitized to "Script error.", "", 0. This is generally okay if you really don't want to process the error if it comes from a script that you don't care about, so the application can filter out errors that look like this. However, this does not happen in Firefox or Safari, nor does Chrome do this for try/catch blocks.
+In Chrome, errors that come from another domain in the window.onerror handler will be sanitized to "Script error.", "", 0. This is generally okay if you really don't want to process the error if it comes from a script that you don't care about, so the application can filter out errors that look like this. However, this does not happen in Firefox or Safari or IE11, nor does Chrome do this for try/catch blocks that wrap the offending code.
 
-If you would like to receive errors in window.onerror in Chrome with full fidelity from cross domain scripts, those resources must provide the appropriate cross origin headers. See https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror for more information.
+If you would like to receive errors in `window.onerror` in Chrome with full fidelity from cross domain scripts, those resources must provide the appropriate cross origin headers. See https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror for more information.
 
 **Chrome Extensions**
 
-Chrome extensions that are installed on a user's machine can also throw errors that get reported to window.onerror. These exceptions are very noisy and unactionable, so it's important that your application avoids reporting these errors.
-
-**Other Bugs**
-
-*  TODO: Write bug report for top level line number argument is wrong when sourceURL is used.
+In old versions of Chrome, Chrome extensions that are installed on a user's machine could also throw errors that get reported to window.onerror. This has been fixed in newer versions of Chrome. See the dedicated [Chrome Extensions](#chrome-extensions) section below.
 
 #### window.addEventListener("error")
 
@@ -340,7 +351,7 @@ window.onerror is the best tool to catch and report JS errors. It's recommended 
 
 ### try/catch
 
-Given the above section, unfortunately it's not possible to rely on window.onerror in all browsers to capture all error information. For catching exceptions locally, a try/catch block is the obvious choice. It's also possible to wrap entire JavaScript files in a try/catch block to capture error information that can't be caught with window.onerror. This improves the situations for browsers that don't support window.onerror, but also has some downsides.
+Given the above section, unfortunately it's not possible to rely on `window.onerror` in all browsers to capture all error information. For catching exceptions locally, a try/catch block is the obvious choice. It's also possible to wrap entire JavaScript files in a try/catch block to capture error information that can't be caught with window.onerror. This improves the situations for browsers that don't support window.onerror, but also has some downsides.
 
 #### Doesn't catch all errors
 
@@ -352,7 +363,7 @@ In V8 (and potentially other JS engines), functions that contain a try/catch blo
 
 ### Protected Entry Points
 
-An "entry point" into JavaScript is any browser API that can start execution of your code. Examples include setTimeout, setInterval, event listeners, XHR, web sockets, or promises. Errors that are thrown from these entry points will be caught by window.onerror, but in the browsers that don't support the full Error object in window.onerror, an alternative mechanism is needed to catch these errors since the try/catch method mentioned above won't catch them either.
+An "entry point" into JavaScript is any browser API that can start execution of your code. Examples include `setTimeout`, `setInterval`, event listeners, XHR, web sockets, or promises. Errors that are thrown from these entry points will be caught by window.onerror, but in the browsers that don't support the full Error object in window.onerror, an alternative mechanism is needed to catch these errors since the try/catch method mentioned above won't catch them either.
 
 Thankfully, JavaScript allows these entry points to be wrapped so that a try/catch block can be inserted before the function is invoked to catch any errors thrown by the code.
 
@@ -437,7 +448,7 @@ var worker = new Worker('worker.js');
 worker.onerror = function(errorEvent) { ... };
 ```
 
-This is defined in https://html.spec.whatwg.org/multipage/workers.html#handler-abstractworker-onerror. The `onerror` function on the worker has a different signature than the `window.onerror` discussed above. Instead of accepting 5 arguments, worker.onerror takes a single argument: an ErrorEvent object. The API for this object can be found at https://developer.mozilla.org/en-US/docs/Web/API/ErrorEvent. It contains the message, filename, line, and column, but no stable browser today contains the "Error" object that contains the stack trace (errorEvent.error is null). Since this API is executed in the parent page's scope, it would be useful for using the same reporting mechanism as the parent page; unfortunately due to the lack of a stack trace, this API is of limited use.
+This is defined in https://html.spec.whatwg.org/multipage/workers.html#handler-abstractworker-onerror. The `onerror` function on the worker has a different signature than the `window.onerror` discussed above. Instead of accepting 5 arguments, `worker.onerror` takes a single argument: an `ErrorEvent` object. The API for this object can be found at https://developer.mozilla.org/en-US/docs/Web/API/ErrorEvent. It contains the message, filename, line, and column, but no stable browser today contains the "Error" object that contains the stack trace (errorEvent.error is null). Since this API is executed in the parent page's scope, it would be useful for using the same reporting mechanism as the parent page; unfortunately due to the lack of a stack trace, this API is of limited use.
 
 Inside of the JS run by the worker, you can also define an onerror API that follows the usual window.onerror API: https://html.spec.whatwg.org/multipage/webappapis.html#onerroreventhandler. In the worker code:
 
@@ -451,21 +462,21 @@ Firefox, as well as Safari, do not report the "error" object as the 5th argument
 
 Since this code executes within the worker, the code must choose how to report the error back to the server: It must either use `postMessage` to communicate the error back to the parent page, or install an XHR error reporting mechanism (discussed more below) in the worker itself.
 
-In Firefox, Safari, and IE11 (but not in Chrome), the parent page's window.onerror function will also be called after the worker's own onerror and the onerror event listener set by the page has been called. However, this window.onerror will also not contain an error object and therefore won't have a stack trace also. These browsers must also take care to not report errors from workers multiple times.
+In Firefox, Safari, and IE11 (but not in Chrome), the parent page's `window.onerror` function will also be called after the worker's own onerror and the onerror event listener set by the page has been called. However, this window.onerror will also not contain an error object and therefore won't have a stack trace also. These browsers must also take care to not report errors from workers multiple times.
 
 #### Shared workers
 
 Chrome and Firefox support the [SharedWorker API](http://www.w3.org/TR/workers/#sharedworker) for sharing a worker among multiple pages. Since the worker is shared, it is not attached to one parent page exclusively; this leads to some differences in how errors are handled, although SharedWorker mostly follows the same information as the dedicated web worker.
 
-In Chrome, when there is an error in a SharedWorker, only the worker's own error handling within the worker code itself will be called (like if they set `self.onerror`). The parent page's window.onerror will not be called, and Chrome does not support the inherited `AbstractWorker.onerror` that can be called in the parent page as defined in the spec.
+In Chrome, when there is an error in a SharedWorker, only the worker's own error handling within the worker code itself will be called (like if they set `self.onerror`). The parent page's `window.onerror` will not be called, and Chrome does not support the inherited `AbstractWorker.onerror` that can be called in the parent page as defined in the spec.
 
-In Firefox, this behavior is different. An error in the shared worker will cause the parent page's window.onerror to be called, but the error object will be null. Additionally, Firefox does support the `AbstractWorker.onerror` property, so the parent page can attach an error handler of its own to the worker. However, when this error handler is called, the error object will be null so there will be no stack trace.
+In Firefox, this behavior is different. An error in the shared worker will cause the parent page's window.onerror to be called, but the error object will be null. Additionally, Firefox does support the `AbstractWorker.onerror` property, so the parent page can attach an error handler of its own to the worker. However, when this error handler is called, the error object will be null so there will be no stack trace, so it's of limited use.
 
 #### Service Workers
 
 [Service Workers](http://www.w3.org/TR/service-workers/) are a brand new spec that is currently only available in recent Chrome and Firefox versions. These workers follow the same discussion as dedicated web workers. 
 
-Service workers are installed by calling the `navigator.serviceWorker.register` function. This function returns a Promise which will be rejected if there was an error installing the service worker, such as it throwing an error during initialization. This error will only contain a string message and nothing else. Additionally, since Promises don't report errors to window.onerror handlers, the application itself would have to add a catch block to the Promise to catch the error.
+Service workers are installed by calling the `navigator.serviceWorker.register` function. This function returns a Promise which will be rejected if there was an error installing the service worker, such as it throwing an error during initialization. This error will only contain a string message and nothing else. Additionally, since Promises don't report errors to `window.onerror` handlers, the application itself would have to add a catch block to the Promise to catch the error.
 
 ```javascript
 navigator.serviceWorker.register('service-worker-installation-error.js').catch(function(error) {
