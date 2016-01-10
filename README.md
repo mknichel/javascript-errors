@@ -70,6 +70,8 @@ You can find the templates that browsers use for error messages at:
 *  Firefox - http://mxr.mozilla.org/mozilla1.9.1/source/js/src/js.msg
 *  Chrome - https://code.google.com/p/v8/source/browse/branches/bleeding_edge/src/messages.js
 
+**![error message warning](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Browsers will produce different error messages for some exceptions.**
+
 ### Stack Trace Format
 
 The stack trace is a description of where the error happened in the code. It is composed of a series of frames, where each frames describe a particular line in the code. The topmost frame is the location where the error was thrown, while the subsequent frames are the function call stack - or how the code was executed to get to that point where the error was thrown. Since JavaScript is usually concatenated and minified, it is also important to have column numbers so that the exact statement can be located when a given line has a multitude of statements.
@@ -111,6 +113,8 @@ The same basic information is there, but the format is different.
 Also note that in the Safari example, aside from the format being different than Chrome, the column numbers are different than both Chrome and Firefox. The column numbers also can deviate more in different error situations - for example in the code `(function namedFunction() { throwError(); })();`, Chrome will report the column for the `throwError()` function call while IE11 reports the column number as the start of the string. These differences will come back into play later when the server needs to parse the stack trace for reported errors and deobfuscate obfuscated stack traces.
 
 See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/Stack for more information on the stack property of errors.
+
+**![stack trace format warning](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) The format of stack traces is different by browser in form and column numbers used.**
 
 Diving in more, there are a lot of nuances to stack trace formats that are discussed in the below sections.
 
@@ -173,6 +177,8 @@ In other browsers, this would look like:
 at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37)
 ```
 
+**![inner function Firefox stack frame warning](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Firefox uses different stack frame text for functions defined within another function.**
+
 ##### displayName Property
 
 The display name of a function can also be set by the `displayName` property in all major browsers except for IE11. In these browsers, the displayName will appear in the devtools debugger, but in all browsers but Safari, it will **not** be used in Error stack traces (Safari differs from the rest by also using the displayName in the stack trace associated with an error).
@@ -184,11 +190,15 @@ someFunction.displayName = " # A longer description of the function.";
 
 There is no official spec for the displayName property, but it is supported by all the major browsers. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/displayName and http://www.alertdebugging.com/2009/04/29/building-a-better-javascript-profiler-with-webkit/ for more information on displayName.
 
+**![IE11 no displayName property](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) IE11 doesn't support the displayName property.**
+
+**![Safari displayName property bug](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari uses the displayName property as the symbol name in Error stack traces.**
+
 #### Programatically capturing stack traces
 
 If an error is reported without a stack trace (see more details when this would happen below), then it's possible to programatically capture a stack trace.
 
-In Chrome, this is really easy to do by using the Error.captureStackTrace API. See https://github.com/v8/v8/wiki/Stack%20Trace%20API for more information on the use of this API.
+In Chrome, this is really easy to do by using the `Error.captureStackTrace` API. See https://github.com/v8/v8/wiki/Stack%20Trace%20API for more information on the use of this API.
 
 For example:
 
@@ -238,6 +248,8 @@ Async stack traces are only supported in Chrome DevTools right now, only for exc
 
 It is possible to polyfill async stack traces in some cases, but this could cause a significant performance hit for your application since capturing a stack trace is not cheap.
 
+**![Only Chrome supports async stack traces](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Only Chrome DevTools natively supports async stack traces.**
+
 #### Naming inline scripts and eval
 
 Stack traces for code that was eval'ed or inlined into a HTML page will use the page's URL and line/column numbers for the executed code.
@@ -260,8 +272,11 @@ This is a really handy technique to make sure that stack traces are still correc
 
 http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl describes the sourceURL annotation in more detail.
 
-*  Up until Chrome 42, Chrome did not compute line numbers correctly for inline scripts that use the sourceURL annotation. See https://bugs.chromium.org/p/v8/issues/detail?id=3920 for more information.
-*  TODO: File a bug for: there's a bug triggered only in certain applications where the line number reported in stack traces that come from inline scripts is relative to the HTML document even when sourceURL is used, which results in bad deobfuscation for those stacks.
+**![Lack of sourceURL support](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari and IE do not support the sourceURL annotation for naming inline scripts and evals.**
+
+**![Chrome bug for computing line numbers with sourceURL](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Up until Chrome 42, Chrome did not compute line numbers correctly for inline scripts that use the sourceURL annotation. See https://bugs.chromium.org/p/v8/issues/detail?id=3920 for more information.**
+
+**![Chrome bug in line numbers from inline scripts](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) TODO: File a bug for: there's a bug triggered only in certain applications where the line number reported in stack traces that come from inline scripts is relative to the HTML document even when sourceURL is used, which results in bad deobfuscation for those stacks.**
 
 ##### Eval stack traces
 
@@ -304,6 +319,8 @@ Error from eval
 
 These differences can make it hard to parse eval code the same across all browsers.
 
+**![Different eval stack trace format across browsers](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Each browser uses a different stack trace format for errors that happened inside eval.**
+
 ## Catching JavaScript Errors
 
 To detect that your application had an error, some code must be able to catch that error and report about it. There are multiple techniques for catching errors, each with their pros and cons.
@@ -327,11 +344,15 @@ Historically, there have been a few problems with this approach:
 
 The 5th argument to the `window.onerror` function is supposed to be an Error object. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome, Firefox, and IE11 now properly provide an Error object (along with the critical stack property), but Safari and IE10 do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127).
 
+**![Lack of support for Error in window.onerror](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari and IE10 do not support an Error object with a stack trace in window.onerror.**
+
 **Cross domain sanitization**
 
 In Chrome, errors that come from another domain in the window.onerror handler will be sanitized to "Script error.", "", 0. This is generally okay if you really don't want to process the error if it comes from a script that you don't care about, so the application can filter out errors that look like this. However, this does not happen in Firefox or Safari or IE11, nor does Chrome do this for try/catch blocks that wrap the offending code.
 
 If you would like to receive errors in `window.onerror` in Chrome with full fidelity from cross domain scripts, those resources must provide the appropriate cross origin headers. See https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror for more information.
+
+**![Cross domain sanitization in window.onerror](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Chrome is the only browser that will sanitize errors that come from another origin. Take care to filter these out, or set the appropriate headers.**
 
 **Chrome Extensions**
 
@@ -356,6 +377,8 @@ Given the above section, unfortunately it's not possible to rely on `window.oner
 #### Doesn't catch all errors
 
 A try/catch block won't capture all errors in a program, such as errors that are thrown from an async block of code through `window.setTimeout`. Try/catch can be used with [Protected Entry Points](#protected-entry-points) to help fill in the gaps. 
+
+**![Use protected entry points with try/catch](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) try/catch blocks wrapping the entire application aren't sufficient to catch all errors.**
 
 #### Deoptimizations
 
@@ -417,6 +440,8 @@ One approach to capture more information is to use [Protected Entry Points](#pro
   };
 ```
 
+**![Errors in Promises will go unhandled by default](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Sadly, errors from Promises will go unhandled by default.**
+
 #### Error handling in Promise polyfills
 
 Promise implementations, such as Q, Bluebird, and Closure handle errors in different ways which are better than the error handling in the browser implementation of Promises.
@@ -458,11 +483,11 @@ self.onerror = function(message, filename, line, col, error) { ... };
 
 The discussion of this API mostly follows the discussion above for window.onerror. However, there are 2 notable things to point out:
 
-Firefox, as well as Safari, do not report the "error" object as the 5th argument to the function, so these browsers do not get a stack trace from the worker (Chrome and IE11 do get a stack trace). Protected Entry Points for the `onmessage` function within the worker can be used to capture stack trace information for these browsers.
+**![](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Firefox, as well as Safari, do not report the "error" object as the 5th argument to the function, so these browsers do not get a stack trace from the worker (Chrome and IE11 do get a stack trace). Protected Entry Points for the `onmessage` function within the worker can be used to capture stack trace information for these browsers.**
 
 Since this code executes within the worker, the code must choose how to report the error back to the server: It must either use `postMessage` to communicate the error back to the parent page, or install an XHR error reporting mechanism (discussed more below) in the worker itself.
 
-In Firefox, Safari, and IE11 (but not in Chrome), the parent page's `window.onerror` function will also be called after the worker's own onerror and the onerror event listener set by the page has been called. However, this window.onerror will also not contain an error object and therefore won't have a stack trace also. These browsers must also take care to not report errors from workers multiple times.
+**![](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) In Firefox, Safari, and IE11 (but not in Chrome), the parent page's `window.onerror` function will also be called after the worker's own onerror and the onerror event listener set by the page has been called. However, this window.onerror will also not contain an error object and therefore won't have a stack trace also. These browsers must also take care to not report errors from workers multiple times.**
 
 #### Shared workers
 
@@ -471,6 +496,8 @@ Chrome and Firefox support the [SharedWorker API](http://www.w3.org/TR/workers/#
 In Chrome, when there is an error in a SharedWorker, only the worker's own error handling within the worker code itself will be called (like if they set `self.onerror`). The parent page's `window.onerror` will not be called, and Chrome does not support the inherited `AbstractWorker.onerror` that can be called in the parent page as defined in the spec.
 
 In Firefox, this behavior is different. An error in the shared worker will cause the parent page's window.onerror to be called, but the error object will be null. Additionally, Firefox does support the `AbstractWorker.onerror` property, so the parent page can attach an error handler of its own to the worker. However, when this error handler is called, the error object will be null so there will be no stack trace, so it's of limited use.
+
+**![](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Error handling for shared workers differs by browser.**
 
 #### Service Workers
 
@@ -522,6 +549,8 @@ Content scripts are scripts that run in the context of web pages that a user vis
 Since content scripts have their own execution environment, they can assign to the `window.onerror` handler in their own script and it won't affect the parent page. However, errors caught by `window.onerror` in the content script are sanitized by Chrome resulting in a "Script error." with null filename and 0 for line and column. This bug is tracked by https://code.google.com/p/chromium/issues/detail?id=457785. Until that bug is fixed, a try/catch block or protected entry points are the only ways to catch JS errors in a content script with stack traces.
 
 In years past, errors from content scripts would be reported to the `window.onerror` handler of the parent page which could result in a large amount of spammy error reports for popular sites. This was fixed in late 2013 though (https://code.google.com/p/chromium/issues/detail?id=225513). 
+
+**![](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Errors in Chrome Extensions are sanitized before being handled by window.onerror.**
 
 #### Browser Actions
 
