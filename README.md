@@ -69,6 +69,7 @@ You can find the templates that browsers use for error messages at:
 
 *  Firefox - http://mxr.mozilla.org/mozilla1.9.1/source/js/src/js.msg
 *  Chrome - https://code.google.com/p/v8/source/browse/branches/bleeding_edge/src/messages.js
+*  Internet Explorer - https://github.com/Microsoft/ChakraCore/blob/4e4d4f00f11b2ded23d1885e85fc26fcc96555da/lib/Parser/rterrors.h
 
 **![error message warning](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Browsers will produce different error messages for some exceptions.**
 
@@ -276,7 +277,7 @@ http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl 
 
 **![Chrome bug for computing line numbers with sourceURL](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Up until Chrome 42, Chrome did not compute line numbers correctly for inline scripts that use the sourceURL annotation. See https://bugs.chromium.org/p/v8/issues/detail?id=3920 for more information.**
 
-**![Chrome bug in line numbers from inline scripts](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) TODO: File a bug for: there's a bug triggered only in certain applications where the line number reported in stack traces that come from inline scripts is relative to the HTML document even when sourceURL is used, which results in bad deobfuscation for those stacks.**
+**![Chrome bug in line numbers from inline scripts](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Line numbers for stack frames from inline scripts are incorrect when the sourceURL annotation is used since they are relative to the start of the HTML document instead of the start of the inline script tag (making correct deobfuscation not possible). There's an open discussion with the V8 team about this behavior.**
 
 ##### Eval stack traces
 
