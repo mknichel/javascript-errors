@@ -273,11 +273,11 @@ This is a really handy technique to make sure that stack traces are still correc
 
 http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl describes the sourceURL annotation in more detail.
 
-**![Lack of sourceURL support](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari and IE do not support the sourceURL annotation for naming inline scripts and evals.**
+**![Lack of sourceURL support](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari and IE do not support the sourceURL annotation for naming inline scripts and evals. If you use inline scripts in IE or Safari and you obfuscate your code, you will not be able to deobfuscate errors that come from those scripts.**
 
 **![Chrome bug for computing line numbers with sourceURL](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Up until Chrome 42, Chrome did not compute line numbers correctly for inline scripts that use the sourceURL annotation. See https://bugs.chromium.org/p/v8/issues/detail?id=3920 for more information.**
 
-**![Chrome bug in line numbers from inline scripts](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Line numbers for stack frames from inline scripts are incorrect when the sourceURL annotation is used since they are relative to the start of the HTML document instead of the start of the inline script tag (making correct deobfuscation not possible). There's an open discussion with the V8 team about this behavior.**
+**![Chrome bug in line numbers from inline scripts](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Line numbers for stack frames from inline scripts are incorrect when the sourceURL annotation is used since they are relative to the start of the HTML document instead of the start of the inline script tag (making correct deobfuscation not possible). https://code.google.com/p/chromium/issues/detail?id=578269**
 
 ##### Eval stack traces
 
