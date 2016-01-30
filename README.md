@@ -6,18 +6,18 @@ Test cases for content found in this guide can be found at https://mknichel.gith
 
 **Table of Contents**
 
-*  [Introduction](#introduction)
-*  [Anatomy of a JavaScript Error](#anatomy-of-a-javascript-error)
-   *  [Producing a JavaScript Error](#producing-a-javascript-error)
-   *  [Error Messages](#error-messages)
-   *  [Stack Trace Format](#stack-trace-format)
-*  [Catching JavaScript Errors](#catching-javascript-errors)
-   *  [window.onerror](#windowonerror)
-   *  [try/catch](#trycatch)
-   *  [Protected Entry Points](#protected-entry-points)
-   *  [Promises](#promises)
-   *  [Web Workers](#web-workers)
-   *  [Chrome Extensions](#chrome-extensions)
+* [Introduction](#introduction)
+* [Anatomy of a JavaScript Error](#anatomy-of-a-javascript-error)
+  * [Producing a JavaScript Error](#producing-a-javascript-error)
+  * [Error Messages](#error-messages)
+  * [Stack Trace Format](#stack-trace-format)
+* [Catching JavaScript Errors](#catching-javascript-errors)
+  * [window.onerror](#windowonerror)
+  * [try/catch](#trycatch)
+  * [Protected Entry Points](#protected-entry-points)
+  * [Promises](#promises)
+  * [Web Workers](#web-workers)
+  * [Chrome Extensions](#chrome-extensions)
 
 ## Introduction
 
@@ -33,7 +33,7 @@ A JS Error can be thrown by the browser when a piece of code doesn't execute pro
 
 For example:
 
-```javascript
+``` javascript
 var a = 3;
 a();
 ```
@@ -42,7 +42,7 @@ In this example, a variable that is actually a number can't be invoked as a func
 
 A developer might also want to throw an error in a piece of code if a certain precondition is not met. For example
 
-```javascript
+``` javascript
 if (!checkPrecondition()) {
   throw new Error("Doesn't meet precondition!");
 }
@@ -52,10 +52,10 @@ In this case, the error will be `Error: Doesn't meet precondition!`. This error 
 
 There are multiple ways that developers can throw an error in JavaScript:
 
-*  `throw new Error('Problem description.')`
-*  `throw Error('Problem description.')` <-- equivalent to the first one
-*  `throw 'Problem description.'` <-- bad
-*  `throw null` <-- even worse
+* `throw new Error('Problem description.')`
+* `throw Error('Problem description.')` <-- equivalent to the first one
+* `throw 'Problem description.'` <-- bad
+* `throw null` <-- even worse
 
 Throwing a string or null is really not recommended since the browser will not attach a stack trace to that error, losing the context of where that error ocurred in the code. It is best to throw an actual Error object, which will contain the error message as well as a stack trace that points to the right lines of code where the error happened.
 
@@ -67,9 +67,9 @@ However, browsers tend to diverge often as well. When there are multiple default
 
 You can find the templates that browsers use for error messages at:
 
-*  Firefox - http://mxr.mozilla.org/mozilla1.9.1/source/js/src/js.msg
-*  Chrome - https://code.google.com/p/v8/source/browse/branches/bleeding_edge/src/messages.js
-*  Internet Explorer - https://github.com/Microsoft/ChakraCore/blob/4e4d4f00f11b2ded23d1885e85fc26fcc96555da/lib/Parser/rterrors.h
+* Firefox - http://mxr.mozilla.org/mozilla1.9.1/source/js/src/js.msg
+* Chrome - https://code.google.com/p/v8/source/browse/branches/bleeding_edge/src/messages.js
+* Internet Explorer - https://github.com/Microsoft/ChakraCore/blob/4e4d4f00f11b2ded23d1885e85fc26fcc96555da/lib/Parser/rterrors.h
 
 **![error message warning](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Browsers will produce different error messages for some exceptions.**
 
@@ -79,7 +79,7 @@ The stack trace is a description of where the error happened in the code. It is 
 
 A basic stack trace looks like:
 
-```
+``` 
   at throwError (http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:9)
   at http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
@@ -90,21 +90,21 @@ Unfortunately, there is no standard for the stack trace format so this differs b
 
 IE 11's stack trace looks similar to Chrome's except it explicitly lists Global code:
 
-```
+``` 
   at throwError (http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:3)
   at Global code (http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3)
 ```
 
 Firefox's stack trace looks like:
 
-```
+``` 
   throwError@http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:9
   @http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
 
 Safari's format is similar to Firefox's format but is also slightly different:
 
-```
+``` 
   throwError@http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:18
   global code@http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:13
 ```
@@ -123,19 +123,19 @@ Diving in more, there are a lot of nuances to stack trace formats that are discu
 
 By default, anonymous functions have no name and either appear as empty string or "Anonymous function" in the function names in the stack trace (depending on the browser). To improve debugging, you should add a name to all functions to ensure it appears in the stack frame. The easiest way to do this is to ensure that anonymous functions are specified with a name, even if that name is not used anywhere else. For example:
 
-```javascript
+``` javascript
 setTimeout(function nameOfTheAnonymousFunction() { ... }, 0);
 ```
 
 This will cause the stack trace to go from:
 
-```
+``` 
 at http://mknichel.github.io/javascript-errors/javascript-errors.js:125:17
 ```
 
 to
 
-```
+``` 
 at nameOfTheAnonymousFunction (http://mknichel.github.io/javascript-errors/javascript-errors.js:121:31)
 ```
 
@@ -145,21 +145,22 @@ This method ensures that `nameOfTheAnonymousFunction` appears in the frame for a
 
 Browsers will also use the name of the variable or property that a function is assigned to if the function itself does not have a name. For example, in
 
-```javascript
+``` javascript
 var fnVariableName = function() { ... };
 ```
 
 browsers will use `fnVariableName` as the name of the function in stack traces.
 
-```
+``` 
     at throwError (http://mknichel.github.io/javascript-errors/javascript-errors.js:27:9)
     at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37)
 ```
 
 
+
 Even more nuanced than that, if this variable is defined within another function, all browsers will use just the name of the variable as the name of the function in the stack trace except for Firefox, which will use a different form that concatenates the name of the outer function with the name of the inner variable. Example:
 
-```javascript
+``` javascript
 function throwErrorFromInnerFunctionAssignedToVariable() {
   var fnVariableName = function() { throw new Error("foo"); };
   fnVariableName();
@@ -168,13 +169,13 @@ function throwErrorFromInnerFunctionAssignedToVariable() {
 
 will produce in Firefox:
 
-```
+``` 
 throwErrorFromInnerFunctionAssignedToVariable/fnVariableName@http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37
 ```
 
 In other browsers, this would look like:
 
-```
+``` 
 at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors.js:169:37)
 ```
 
@@ -184,7 +185,7 @@ at fnVariableName (http://mknichel.github.io/javascript-errors/javascript-errors
 
 The display name of a function can also be set by the `displayName` property in all major browsers except for IE11. In these browsers, the displayName will appear in the devtools debugger, but in all browsers but Safari, it will **not** be used in Error stack traces (Safari differs from the rest by also using the displayName in the stack trace associated with an error).
 
-```javascript
+``` javascript
 var someFunction = function() {};
 someFunction.displayName = " # A longer description of the function.";
 ```
@@ -203,7 +204,7 @@ In Chrome, this is really easy to do by using the `Error.captureStackTrace` API.
 
 For example:
 
-```javascript
+``` javascript
 function ignoreThisFunctionInStackTrace() {
   var err = new Error();
   Error.captureStackTrace(err, ignoreThisFunctionInStackTrace);
@@ -213,14 +214,14 @@ function ignoreThisFunctionInStackTrace() {
 
 In other browsers, a stack trace can also be collected by creating a new error and accessing the stack property of that object:
 
-```javascript
+``` javascript
 var err = new Error('');
 return err.stack;
 ```
 
 However, IE10 only populates the stack trace when the error is actually thrown:
 
-```javascript
+``` javascript
 try {
   throw new Error('');
 } catch (e) {
@@ -238,7 +239,7 @@ Chrome DevTools has support for async stack traces, or in other words making sur
 
 An async stack trace will look like:
 
-```
+``` 
   throwError	@	throw-error.js:2
   setTimeout (async)		
   throwErrorAsync	@	throw-error.js:10
@@ -257,14 +258,14 @@ Stack traces for code that was eval'ed or inlined into a HTML page will use the 
 
 For example:
 
-```
+``` 
   at throwError (http://mknichel.github.io/javascript-errors/throw-error-basic.html:8:9)
   at http://mknichel.github.io/javascript-errors/throw-error-basic.html:12:3
 ```
 
 If these scripts actually come from a script that was inlined for optimization reasons, then the URL, line, and column numbers will be wrong. To work around this problem, Chrome and Firefox support the `//# sourceURL=` annotation (Safari and IE do not). The URL specified in this annotation will be used as the URL for all stack traces, and the line and column number will be computed relative to the start of the `<script>` tag instead of the HTML document. For the same error as above, using the sourceURL annotation with a value of "inline.js" will produce a stack trace that looks like:
 
-```
+``` 
   at throwError (http://mknichel.github.io/javascript-errors/inline.js:8:9)
   at http://mknichel.github.io/javascript-errors/inline.js:12:3
 ```
@@ -283,7 +284,7 @@ http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl 
 
 For code that uses eval, there are other differences in the stack trace besides whether or not it uses the sourceURL annotation. In Chrome, a stack trace from a statement used in eval could look like:
 
-```
+``` 
 Error: Error from eval
     at evaledFunction (eval at evalError (http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3), <anonymous>:1:36)
     at eval (eval at evalError (http://mknichel.github.io/javascript-errors/javascript-errors.js:137:3), <anonymous>:1:68)
@@ -292,7 +293,7 @@ Error: Error from eval
 
 In IE11, this would look like:
 
-```
+``` 
 Error from eval
     at evaledFunction (eval code:1:30)
     at eval code (eval code:1:2)
@@ -301,7 +302,7 @@ Error from eval
 
 In Safari:
 
-```
+``` 
 Error from eval
     evaledFunction
     eval code
@@ -311,7 +312,7 @@ Error from eval
 
 and in Firefox:
 
-```
+``` 
 Error from eval
     evaledFunction@http://mknichel.github.io/javascript-errors/javascript-errors.js line 137 > eval:1:36
     @http://mknichel.github.io/javascript-errors/javascript-errors.js line 137 > eval:1:11
@@ -330,7 +331,7 @@ To detect that your application had an error, some code must be able to catch th
 
 `window.onerror` is one of the easiest and best ways to get started catching errors. By assigning `window.onerror` to a function, any error that is uncaught by another part of the application will be reported to this function, along with some information about the error. For example:
 
-```javascript
+``` javascript
 window.onerror = function(msg, url, line, col, err) {
   console.log('Application encountered an error: ' + msg);
   console.log('Stack trace: ' + err.stack);
@@ -393,7 +394,7 @@ Thankfully, JavaScript allows these entry points to be wrapped so that a try/cat
 
 Each entry point will need slightly different code to protect the entry point, but the gist of the methodology is:
 
-```javascript
+``` javascript
 function protectEntryPoint(fn) {
   return function protectedFn() {
     try {
@@ -413,7 +414,7 @@ window.setTimeout = function protectedSetTimeout(fn, time) {
 
 Sadly, it's easy for errors that happen in Promises to go unobserved and unreported. Errors that happen in a Promise but are not handled by attaching a rejection handler are not reported anywhere else - they do **not** get reported to `window.onerror`. Even if a Promise attaches a rejection handler, that code itself must manually report those errors for them to be logged. See http://www.html5rocks.com/en/tutorials/es6/promises/#toc-error-handling for more information. For example:
 
-```javascript
+``` javascript
 window.onerror = function(...) {
   // This will never be invoked by Promise code.
 };
@@ -434,11 +435,36 @@ p2.then(function() {
 
 One approach to capture more information is to use [Protected Entry Points](#protected-entry-points) to wrap invocations of Promise methods with a try/catch to report errors. This might look like:
 
-```javascript
-  var _oldPromiseThen = Promise.prototype.then;
-  Promise.prototype.then = function protectedThen(callback, errorHandler) {
-    return _oldPromiseThen.call(this, protectEntryPoint(callback), protectEntryPoint(errorHandler));
-  };
+``` javascript
+const protectEntryPoint = fn => {
+	return function protectedFn() {
+		try {
+			return fn(...arguments)
+		} catch (err) {
+			// handle error
+			throw err
+		}
+	}
+}
+
+const _then = Promise.prototype.then
+
+const initPromiseWatcher = constructor => {
+	constructor.prototype.then = function(...args) {
+		try {
+			const newArgs = args.map(arg => {
+				if (typeof arg === 'function') {
+					return protectEntryPoint(arg)
+				} else {
+					return arg
+				}
+			})
+			return _then.apply(this, newArgs)
+		} catch (err) {
+			// handle monkey patch error
+		}
+	}
+}
 ```
 
 **![Errors in Promises will go unhandled by default](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Sadly, errors from Promises will go unhandled by default.**
@@ -469,7 +495,7 @@ Dedicated web workers execute in a different execution context than the main pag
 
 When a worker is created, the onerror property can be set on the new worker:
 
-```javascript
+``` javascript
 var worker = new Worker('worker.js');
 worker.onerror = function(errorEvent) { ... };
 ```
@@ -478,7 +504,7 @@ This is defined in https://html.spec.whatwg.org/multipage/workers.html#handler-a
 
 Inside of the JS run by the worker, you can also define an onerror API that follows the usual window.onerror API: https://html.spec.whatwg.org/multipage/webappapis.html#onerroreventhandler. In the worker code:
 
-```javascript
+``` javascript
 self.onerror = function(message, filename, line, col, error) { ... };
 ```
 
@@ -506,7 +532,7 @@ In Firefox, this behavior is different. An error in the shared worker will cause
 
 Service workers are installed by calling the `navigator.serviceWorker.register` function. This function returns a Promise which will be rejected if there was an error installing the service worker, such as it throwing an error during initialization. This error will only contain a string message and nothing else. Additionally, since Promises don't report errors to `window.onerror` handlers, the application itself would have to add a catch block to the Promise to catch the error.
 
-```javascript
+``` javascript
 navigator.serviceWorker.register('service-worker-installation-error.js').catch(function(error) {
   // error typeof string
 });
@@ -520,7 +546,7 @@ The service worker API contains an onerror property inherited from the AbstractW
 
 To capture stack traces in Firefox + Safari within a worker, the `onmessage` function can be wrapped in a try/catch block to catch any errors that propagate to the top. 
 
-```javascript
+``` javascript
 self.onmessage = function(event) {
   try {
     // logic here
@@ -532,7 +558,7 @@ self.onmessage = function(event) {
 
 The normal try/catch mechanism will capture stack traces for these errors, producing an exception that looks like:
 
-```
+``` 
 Error from worker
 throwError@http://mknichel.github.io/javascript-errors/worker.js:4:9
 throwErrorWrapper@http://mknichel.github.io/javascript-errors/worker.js:8:3
