@@ -449,22 +449,22 @@ const protectEntryPoint = fn => {
 
 const _then = Promise.prototype.then
 
-const initPromiseWatcher = constructor => {
-	constructor.prototype.then = function(...args) {
-		try {
-			const newArgs = args.map(arg => {
-				if (typeof arg === 'function') {
-					return protectEntryPoint(arg)
-				} else {
-					return arg
-				}
-			})
-			return _then.apply(this, newArgs)
-		} catch (err) {
-			// handle monkey patch error
-		}
+
+Promise.prototype.then = function(...args) {
+	try {
+		const newArgs = args.map(arg => {
+			if (typeof arg === 'function') {
+				return protectEntryPoint(arg)
+			} else {
+				return arg
+			}
+		})
+		return _then.apply(this, newArgs)
+	} catch (err) {
+		// handle monkey patch error
 	}
 }
+
 ```
 
 **![Errors in Promises will go unhandled by default](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Sadly, errors from Promises will go unhandled by default.**
