@@ -449,7 +449,6 @@ const protectEntryPoint = fn => {
 
 const _then = Promise.prototype.then
 
-
 Promise.prototype.then = function(...args) {
 	try {
 		const newArgs = args.map(arg => {
