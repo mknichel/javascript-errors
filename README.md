@@ -322,6 +322,42 @@ These differences can make it hard to parse eval code the same across all browse
 
 **![Different eval stack trace format across browsers](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Each browser uses a different stack trace format for errors that happened inside eval.**
 
+#### Stack traces with native frames
+
+Your JavaScript code can also be called directly from native code. `Array.prototype.forEach` is a good example - you pass a function to `forEach` and the JS engine will call that function for you.
+
+```javascript
+function throwErrorWithNativeFrame() {
+  var arr = [0, 1, 2, 3];
+  arr.forEach(function namedFn(value) {
+    throwError();
+  });
+}
+```
+
+This produces different stack traces in different browsers. Chrome and Safari append the name of the native function in the stack trace itself as a separate frame, such as:
+
+```
+(Chrome)
+    at namedFn (http://mknichel.github.io/javascript-errors/javascript-errors.js:153:5)
+    at Array.forEach (native)
+    at throwErrorWithNativeFrame (http://mknichel.github.io/javascript-errors/javascript-errors.js:152:7)
+
+(Safari)
+    namedFn@http://mknichel.github.io/javascript-errors/javascript-errors.js:153:15
+    forEach@[native code]
+    throwErrorWithNativeFrame@http://mknichel.github.io/javascript-errors/javascript-errors.js:152:14
+```
+
+However, Firefox and IE11 do **not** show that `forEach` was called as part of the stack:
+
+```
+namedFn@http://mknichel.github.io/javascript-errors/javascript-errors.js:153:5
+throwErrorWithNativeFrame@http://mknichel.github.io/javascript-errors/javascript-errors.js:152:3
+```
+
+**![Different native function stack frame behavior](https://mknichel.github.io/javascript-errors/ic_warning_black_18px.svg) Some browsers include native code frames in stack traces, while others do not.**
+
 ## Catching JavaScript Errors
 
 To detect that your application had an error, some code must be able to catch that error and report about it. There are multiple techniques for catching errors, each with their pros and cons.
