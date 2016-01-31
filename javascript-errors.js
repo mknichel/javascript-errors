@@ -147,6 +147,13 @@ function exampleErrorMessageTemplate() {
   a();
 }
 
+function throwErrorWithNativeFrame() {
+  var arr = [0, 1, 2, 3];
+  arr.forEach(function namedFn(value) {
+    throwError();
+  });
+}
+
 function throwAsyncError() {
   window.setTimeout(throwErrorWrapper, 10);
 }
