@@ -495,6 +495,18 @@ The [async stack trace](#async-stack-traces) section above discusses that browse
 * In Bluebird, call `Promise.longStackTraces()` somewhere in the application. See http://bluebirdjs.com/docs/features.html#long-stack-traces.
 * In Closure, set `goog.Promise.LONG_STACK_TRACES` to true.
 
+#### Promise Rejection Events
+
+Chrome 49 added support for events that are dispatched when a Promise is rejected. This allows applications to hook into Promise errors to ensure that they get centrally reported along with the rest of the errors.
+
+```javascript
+window.addEventListener('unhandledrejection', event => {
+  // event.reason contains the rejection reason. When an Error is thrown, this is the Error object.
+});
+```
+
+See https://googlechrome.github.io/samples/promise-rejection-events/ and https://www.chromestatus.com/feature/4805872211460096 for more information.
+
 ### Web Workers
 
 Web workers, including dedicated workers, shared workers, and service workers, are becoming more popular in applications today. Since all of these workers are separate scripts from the main page, they each need their own error handling code. It is recommended that each worker script install its own error handling and reporting code for maximum effectiveness handling errors from workers.
