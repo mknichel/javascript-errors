@@ -46,7 +46,8 @@ function resetErrorHandlers() {
   if (_oldPromiseThen) {
     Promise.prototype.then = _oldPromiseThen;
   }
-  window.removeEventListener("error", errorEventListener);
+  window.removeEventListener('error', errorEventListener);
+  window.removeEventListener('unhandledrejection', handleRejectedPromise);
 }
 
 function useNoErrorHandler() {
@@ -71,6 +72,7 @@ function useWindowOnError() {
     }
   };
 }
+useWindowOnError();
 
 function useTryCatch() {
   resetErrorHandlers();
@@ -116,11 +118,18 @@ function errorEventListener(e) {
   log(content);
 }
 
+function handleRejectedPromise(promiseRejectionEvent) {
+  log('Error from unhandledrejection event: ', true);
+  log(promiseRejectionEvent.reason, true);
+}
+
 function useWindowAddEventListener() {
   resetErrorHandlers();
   document.getElementById('windowaddeventlistener').className = 'active';
 
-  window.addEventListener("error", errorEventListener);
+  window.addEventListener('error', errorEventListener);
+  // Defined in Chrome 49+. See https://googlechrome.github.io/samples/promise-rejection-events/
+  window.addEventListener('unhandledrejection', handleRejectedPromise);
 }
 
 /** Catches any errors thrown by the given function. */
