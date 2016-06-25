@@ -381,7 +381,7 @@ Historically, there have been a few problems with this approach:
 
 The 5th argument to the `window.onerror` function is supposed to be an Error object. This was added to the WHATWG spec in 2013: https://html.spec.whatwg.org/multipage/webappapis.html#errorevent. Chrome, Firefox, and IE11 now properly provide an Error object (along with the critical stack property), but Safari and IE10 do not. This works in Firefox since Firefox 14 (https://bugzilla.mozilla.org/show_bug.cgi?id=355430) and in Chrome since late 2013 (https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror, https://code.google.com/p/chromium/issues/detail?id=147127). The Safari Technology Preview (TP) added support for the Error object in window.onerror in June 2016 ([change](https://trac.webkit.org/changeset/202023/trunk/Source)).
 
-**![Lack of support for Error in window.onerror](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari and IE10 do not support an Error object with a stack trace in window.onerror. Safari will support the Error ojbect in Safari 10.**
+**![Lack of support for Error in window.onerror](https://mknichel.github.io/javascript-errors/ic_bug_report_black_18px.svg) Safari and IE10 do not support an Error object with a stack trace in window.onerror. Safari will support the Error object in Safari 10.**
 
 **Cross domain sanitization**
 
