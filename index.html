@@ -7,21 +7,6 @@
       background-color: green;
     }
   </style>
-  <!-- Uncomment this and run with localhost to test cross domain behavior. -->
-  <!--<script src="https://mknichel.github.io/javascript-errors/javascript-errors.js"></script>-->
-  <script src="javascript-errors.js"></script>
-  <script id="no-sourceurl-annotation">
-    function throwErrorFromInlineScriptNoSourceUrl() {
-      throwErrorWrapper();
-    }
-  </script>
-  <script id="sourceurl-annotation">
-    function throwErrorFromInlineScriptWithSourceUrl() {
-      throwErrorWrapper();
-    }
-
-    //# sourceURL=inline.js
-  </script>
 </head>
 <body>
 
@@ -59,5 +44,20 @@
   <span>Error handler output:</span>
   <pre id="console" style="border: 1px solid black; height: 300px"></pre>
 
+  <!-- Uncomment this and run with localhost to test cross domain behavior. -->
+  <!--<script src="https://mknichel.github.io/javascript-errors/javascript-errors.js"></script>-->
+  <script src="javascript-errors.js"></script>
+  <script id="no-sourceurl-annotation">
+    function throwErrorFromInlineScriptNoSourceUrl() {
+      throwErrorWrapper();
+    }
+  </script>
+  <script id="sourceurl-annotation">
+    function throwErrorFromInlineScriptWithSourceUrl() {
+      throwErrorWrapper();
+    }
+
+    //# sourceURL=inline.js
+  </script>
 </body>
 </html>
